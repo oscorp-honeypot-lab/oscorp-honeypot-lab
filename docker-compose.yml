@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16@sha256:4b7183ac05f8ef417db21fd72d71047a4238340c261d3cc3ddb6d579ab5071ae
     container_name: oscorp_postgres
     restart: unless-stopped
     environment:
@@ -11,7 +11,14 @@ services:
       - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
     networks:
       - oscorp_net
     profiles:
@@ -19,7 +26,7 @@ services:
       - real
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4@sha256:dfd318b417be1356d9c7fdd6a5577c8a45553ac9d34354929a416c69c85daa9f
     container_name: oscorp_elasticsearch
     restart: unless-stopped
     environment:
@@ -30,6 +37,14 @@ services:
       - "${ELASTICSEARCH_PORT:-9200}:9200"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS http://localhost:9200/_cluster/health >/dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
     networks:
       - oscorp_net
     profiles:
@@ -37,7 +52,7 @@ services:
       - real
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.13.4
+    image: docker.elastic.co/kibana/kibana:8.13.4@sha256:aa596f0f8eac0529b4275128699db835e1d839d60ac5af05e3f3a1764d52ae79
     container_name: oscorp_kibana
     restart: unless-stopped
     environment:
@@ -45,7 +60,16 @@ services:
     ports:
       - "${KIBANA_PORT:-5601}:5601"
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS http://localhost:5601/api/status >/dev/null
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 45s
     networks:
       - oscorp_net
     profiles:
@@ -53,7 +77,7 @@ services:
       - real
 
   n8n:
-    image: n8nio/n8n:${N8N_VERSION:-2.15.0}
+    image: n8nio/n8n:${N8N_VERSION:-2.15.0}@sha256:5ff0ad333090d1901005cd764399b1be2c2a29b816704107f08c340d0d223043
     container_name: oscorp_n8n
     restart: unless-stopped
     environment:
@@ -73,8 +97,20 @@ services:
       - ./n8n/workflows:/files/workflows
       - ./scripts:/files/scripts:ro
     depends_on:
-      - postgres
-      - elasticsearch
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -qO- http://localhost:5678/healthz >/dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
     networks:
       - oscorp_net
     profiles:
@@ -82,13 +118,29 @@ services:
       - real
 
   cowrie:
-    image: cowrie/cowrie:3.0.0
+    build:
+      context: .
+      dockerfile: cowrie/Dockerfile
+    image: oscorp/cowrie-lab:3.0.0
+    pull_policy: never
     container_name: oscorp_cowrie
     restart: unless-stopped
+    environment:
+      COWRIE_LAB_ALLOWED_DOWNLOAD_HOSTS: payload-server
     ports:
       - "${COWRIE_SSH_PORT:-2222}:2222"
     volumes:
       - ./cowrie/logs:/cowrie/cowrie-git/var/log/cowrie
+    healthcheck:
+      test:
+        - CMD
+        - /cowrie/cowrie-env/bin/python
+        - -c
+        - "from pathlib import Path; import sys; cmd=Path('/proc/1/cmdline').read_bytes(); sys.exit(0 if b'twistd' in cmd or b'cowrie' in cmd else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     networks:
       - oscorp_net
     profiles:
@@ -101,7 +153,10 @@ services:
     container_name: oscorp_attacker_sim
     restart: unless-stopped
     depends_on:
-      - cowrie
+      cowrie:
+        condition: service_healthy
+      payload-server:
+        condition: service_healthy
     volumes:
       - ./attacker-sim:/app
     working_dir: /app
@@ -110,6 +165,87 @@ services:
       - oscorp_net
     profiles:
       - lab
+
+  payload-server:
+    build:
+      context: .
+      dockerfile: pipeline/Dockerfile
+    image: oscorp/pipeline:phase8
+    pull_policy: never
+    container_name: oscorp_payload_server
+    restart: unless-stopped
+    command:
+      - python
+      - -m
+      - http.server
+      - "8080"
+      - --bind
+      - 0.0.0.0
+      - --directory
+      - /payloads
+    volumes:
+      - ./attacker-sim/payloads:/payloads:ro
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "from urllib.request import urlopen; urlopen('http://localhost:8080/mirai.sh', timeout=2).read()"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    networks:
+      - oscorp_net
+    profiles:
+      - lab
+
+  migrate:
+    build:
+      context: .
+      dockerfile: pipeline/Dockerfile
+    image: oscorp/pipeline:phase8
+    pull_policy: never
+    container_name: oscorp_migrate
+    command:
+      - alembic
+      - upgrade
+      - head
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-oscorp}:${POSTGRES_PASSWORD:-oscorp123}@postgres:5432/${POSTGRES_DB:-oscorp}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - oscorp_net
+    profiles:
+      - lab
+      - real
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: pipeline/Dockerfile
+    image: oscorp/pipeline:phase8
+    pull_policy: never
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-oscorp}:${POSTGRES_PASSWORD:-oscorp123}@postgres:5432/${POSTGRES_DB:-oscorp}
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_INDEX: ${ELASTICSEARCH_INDEX:-cowrie-events}
+      COWRIE_LOG_PATH: /files/cowrie/cowrie.json
+    volumes:
+      - ./cowrie/logs:/files/cowrie:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - oscorp_net
+    profiles:
+      - tools
 
 networks:
   oscorp_net:

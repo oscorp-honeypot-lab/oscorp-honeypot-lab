@@ -9,12 +9,17 @@ Laboratorio OSCORP refactorizado para ejecutar un honeypot SSH con dos modos:
 
 - Docker Desktop
 - PowerShell
-- Python 3 disponible en el host para ejecutar el procesador local
 
 ## Levantar modo LAB
 
 ```powershell
 docker compose --profile lab up -d
+```
+
+También puede utilizarse el instalador reproducible:
+
+```powershell
+.\scripts\setup.ps1
 ```
 
 Servicios principales:
@@ -61,15 +66,36 @@ PostgreSQL: tabla eventos
 Elasticsearch: indice cowrie-events
 ```
 
+## Demo y validación
+
+```powershell
+.\scripts\validate_lab.ps1
+.\scripts\run_demo.ps1
+.\scripts\smoke_test.ps1
+```
+
+El smoke test comprueba servicios, ataque completo, descarga offline, persistencia, indexación e idempotencia.
+
+## Administración
+
+```powershell
+.\scripts\backup.ps1
+.\scripts\reset_lab.ps1
+```
+
 ## Artefactos importantes
 
 ```text
 docker-compose.yml
 .env.example
-postgres/init.sql
+pipeline/migrations/
 attacker-sim/
 scripts/process_cowrie_ndjson.py
 scripts/run_pipeline.ps1
+scripts/setup.ps1
+scripts/validate_lab.ps1
+scripts/run_demo.ps1
+scripts/smoke_test.ps1
 n8n/workflows/oscorp-workflow.json
 docs/evidencias/
 ESTADO_Y_ROADMAP.md
@@ -80,3 +106,5 @@ ESTADO_Y_ROADMAP.md
 - `.env` queda fuera de git.
 - `n8n` está fijado por defecto en la versión `2.15.0`.
 - `event_hash` es el identificador idempotente de eventos. No se usa `event_uuid` como único porque Cowrie puede repetirlo en varios eventos.
+- El pipeline y las migraciones se ejecutan dentro de Docker; no requieren Python instalado en el host.
+- La simulación de descargas usa payloads inocuos servidos dentro de la red LAB.

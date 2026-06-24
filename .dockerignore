@@ -1,0 +1,9 @@
+.git
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+backups/
+cowrie/logs/*
+docs/evidencias/*.json
+Tesis_*.pdf

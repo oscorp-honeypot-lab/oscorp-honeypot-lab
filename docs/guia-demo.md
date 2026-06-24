@@ -3,7 +3,7 @@
 ## 1. Levantar el laboratorio
 
 ```powershell
-docker compose --profile lab up -d
+.\scripts\setup.ps1
 ```
 
 Validar contenedores:
@@ -15,7 +15,7 @@ docker compose ps
 ## 2. Generar actividad de ataque
 
 ```powershell
-docker compose --profile lab run --rm attacker-sim ./run_scenario.sh full
+.\scripts\run_demo.ps1
 ```
 
 ## 3. Confirmar eventos en Cowrie
@@ -66,3 +66,11 @@ Invoke-RestMethod -Uri http://localhost:9200/cowrie-events/_count
 n8n:    http://localhost:5678
 Kibana: http://localhost:5601
 ```
+
+## Smoke test completo
+
+```powershell
+.\scripts\smoke_test.ps1
+```
+
+El smoke test levanta el LAB, ejecuta una campaña completa, procesa el log y comprueba idempotencia.

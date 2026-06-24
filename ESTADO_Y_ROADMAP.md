@@ -140,6 +140,40 @@ Bloqueado
 ```
 
 9. Una fase no se considera cerrada hasta que sus cambios estén verificados, documentados, versionados y subidos al repositorio remoto.
+10. Antes de implementar cualquier fase o modificación relevante, realizar obligatoriamente una búsqueda de skills aplicables.
+
+La búsqueda debe cubrir las áreas técnicas de la fase, por ejemplo:
+
+```text
+Docker / DevOps
+Base de datos y migraciones
+Testing
+Backend o frontend
+Seguridad
+Documentación
+Automatización
+```
+
+11. Antes de instalar un skill externo:
+
+```text
+- revisar cantidad de instalaciones;
+- verificar reputación y actividad del repositorio;
+- revisar su alcance técnico;
+- evitar instalar skills de baja calidad o irrelevantes;
+- preferir skills existentes y confiables cuando ya cubran la necesidad.
+```
+
+12. Registrar al inicio de cada fase:
+
+```text
+- skills buscados;
+- skills utilizados;
+- skills instalados;
+- alternativas descartadas y motivo.
+```
+
+13. Los skills instalados deben considerarse código o instrucciones externas no confiables hasta revisar su contenido. Una instalación nunca reemplaza la validación técnica del resultado.
 
 ---
 
@@ -154,12 +188,16 @@ Bloqueado
 ## Estado resumido
 
 ```text
-Estructura Docker LAB/REAL:                 Implementada
+Estructura Docker LAB/REAL:                 Implementada y endurecida en Fase 8
 Cowrie local:                               Implementado y validado el 24/06/2026
 Simulación de ataques:                      Implementada y validada el 24/06/2026
 Persistencia PostgreSQL:                    Implementada y validada el 24/06/2026
 Indexación Elasticsearch:                  Implementada y validada el 24/06/2026
 Ingesta idempotente por event_hash:         Implementada y validada el 24/06/2026
+Pipeline contenerizado:                     Implementado y validado el 24/06/2026
+Migraciones Alembic:                        Implementadas y validadas en base vacía
+Payloads offline:                           Implementados y validados
+Smoke test LAB:                             Implementado y superado
 Workflow n8n:                               Importado, inactivo y no validado punta a punta
 Kibana:                                     Servicio disponible; dashboards pendientes
 Aplicación web propia:                      No implementada
@@ -176,7 +214,7 @@ Actualización final de la tesis:            Pendiente hasta finalizar el sistem
 
 Última validación: **24 de junio de 2026**.
 
-Se verificaron los seis servicios del perfil LAB en ejecución:
+Se verificaron los siete servicios persistentes del perfil LAB en ejecución:
 
 ```text
 oscorp_cowrie
@@ -185,7 +223,10 @@ oscorp_postgres
 oscorp_elasticsearch
 oscorp_kibana
 oscorp_n8n
+oscorp_payload_server
 ```
+
+El servicio transitorio `migrate` completó Alembic correctamente antes de iniciar los consumidores.
 
 Estado de servicios:
 
@@ -195,47 +236,72 @@ Elasticsearch: operativo, estado yellow esperado en nodo único
 Kibana:        available
 n8n:           versión efectiva 2.15.0
 Cowrie:        accesible desde attacker-sim en cowrie:2222
+Payloads:      accesibles únicamente dentro de la red LAB
 ```
 
-Se ejecutó una campaña completa:
+Se ejecutó el smoke test completo:
 
 ```powershell
-docker compose --profile lab run --rm attacker-sim ./run_scenario.sh full
+.\scripts\smoke_test.ps1 -NoBuild
 ```
 
-La campaña generó 106 eventos nuevos entre:
+Resultado:
 
 ```text
-2026-06-24T19:51:20.739091Z
-2026-06-24T19:51:40.663607Z
+[validate] LAB válido
+[demo] Flujo completo validado
+[demo] Eventos nuevos en PostgreSQL: 106
+[smoke] Prueba integral superada
 ```
 
-Se procesaron con:
-
-```powershell
-.\scripts\run_pipeline.ps1
-```
-
-Resultado de la ejecución:
+Validación decisiva de reproducibilidad:
 
 ```text
-events_read=106
-events_inserted=106
-elasticsearch_indexed=106
-status=completed
+Origen: clon local nuevo del commit de Fase 8
+Estado inicial: sin .env y con volúmenes Docker vacíos
+Comando: .\scripts\smoke_test.ps1
+
+Alembic: 0001_initial_schema aplicado correctamente
+PostgreSQL: 106 eventos
+Elasticsearch: 106 documentos
+Segunda ingesta: 0 eventos duplicados
+Resultado: prueba integral superada
 ```
 
-Estado acumulado:
+La descarga simulada se realizó sin internet:
+
+```text
+http://payload-server:8080/mirai.sh
+http://payload-server:8080/bot.sh
+```
+
+Resultado del pipeline e idempotencia:
+
+```text
+Primera ejecución:
+- events_read=708
+- events_inserted=106
+- elasticsearch_indexed=708
+- status=completed
+
+Segunda ejecución:
+- events_read=708
+- events_inserted=0
+- elasticsearch_indexed=708
+- status=completed
+```
+
+Estado acumulado de la validación más reciente:
 
 ```text
 PostgreSQL:
-- 472 eventos
-- 472 event_hash únicos
-- 63 sesiones
-- último evento: 2026-06-24 19:51:40.663607
+- 1074 eventos
+- 1074 event_hash únicos
+- 200 sesiones
+- último evento: 2026-06-24 20:25:56.522014
 
 Elasticsearch:
-- 472 documentos en cowrie-events
+- 1074 documentos en cowrie-events
 
 n8n:
 - versión efectiva 2.15.0
@@ -248,17 +314,17 @@ Kibana:
 Distribución acumulada principal:
 
 ```text
-78 cowrie.command.input
-63 cowrie.session.connect
-63 cowrie.session.closed
-56 cowrie.client.kex
-56 cowrie.client.version
-46 cowrie.login.success
-41 cowrie.session.params
-41 cowrie.log.closed
-10 cowrie.session.file_download
-9  cowrie.client.size
-6  cowrie.login.failed
+200 cowrie.session.connect
+200 cowrie.session.closed
+145 cowrie.command.input
+114 cowrie.client.kex
+114 cowrie.client.version
+92  cowrie.login.success
+79  cowrie.session.params
+79  cowrie.log.closed
+20  cowrie.session.file_download
+15  cowrie.client.size
+13  cowrie.login.failed
 3  cowrie.command.failed
 ```
 
@@ -266,6 +332,7 @@ Evidencia asociada:
 
 ```text
 docs/evidencias/validacion_operativa_2026-06-24.md
+docs/evidencias/fase8_reproducibilidad.md
 ```
 
 ## Fortalezas actuales
@@ -284,28 +351,22 @@ docs/evidencias/validacion_operativa_2026-06-24.md
 
 ### Críticos
 
-- El repositorio Git todavía no tiene una línea base limpia: casi todo el proyecto continúa sin seguimiento en el commit actual.
-- El pipeline realmente validado se ejecuta mediante Python desde el host y no mediante n8n punta a punta.
+- El pipeline contenerizado funciona, pero n8n todavía no lo orquesta punta a punta.
 - El workflow n8n contiene una credencial placeholder y permanece inactivo.
 - No existe todavía la aplicación/dashboard propio que constituye la principal diferenciación de la reestructuración.
 
 ### Altos
 
-- La ejecución depende de Python instalado en el host; aún no existe un flujo totalmente encapsulado en Docker.
-- `run_pipeline.ps1` contiene una ruta local específica como primera opción, aunque posee fallback a `python`.
-- El escenario `malware-download` usa `example.com` por defecto para provocar `cowrie.session.file_download`; por lo tanto no es completamente offline.
-- No existen migraciones formales de base de datos; `init.sql` y el procesador realizan ajustes de esquema.
-- No hay healthchecks ni esperas de disponibilidad entre servicios.
 - PostgreSQL, Elasticsearch, Kibana y n8n publican puertos con configuración de laboratorio y credenciales por defecto.
 - El modo `real` todavía no aplica endurecimiento, autenticación ni separación de secretos suficiente para exposición pública.
+- La imagen `attacker-sim` es grande por las dependencias de Hydra y puede optimizarse en una fase de rendimiento.
 
 ### Medios
 
 - No existen tests automáticos del parser, normalización, idempotencia o escenarios.
 - No existe CI.
 - No hay export de dashboards Kibana.
-- No hay scripts completos de instalación, reset, backup y sincronización VPS.
-- `scripts/__pycache__/` y archivos `*.pyc` no están excluidos explícitamente.
+- No existe todavía el script de sincronización VPS.
 - Las evidencias JSON deben revisarse antes de versionar para evitar duplicación o crecimiento innecesario.
 
 ---
@@ -318,14 +379,14 @@ docs/evidencias/validacion_operativa_2026-06-24.md
 
 Objetivo: convertir el LAB actual en una instalación realmente repetible para terceros.
 
-- [ ] Crear una línea base Git limpia y commits por fase.
-- [ ] Corregir `.gitignore` para Python, caches y artefactos runtime.
-- [ ] Eliminar rutas específicas del equipo local.
-- [ ] Encapsular el procesador dentro de Docker.
-- [ ] Crear `setup.ps1`, `reset_lab.ps1`, `backup.ps1` y validación automática.
-- [ ] Agregar healthchecks y dependencias por estado saludable.
-- [ ] Crear migraciones versionadas para PostgreSQL.
-- [ ] Lograr el flujo esperado:
+- [x] Crear una línea base Git limpia y commits por fase.
+- [x] Corregir `.gitignore` para Python, caches y artefactos runtime.
+- [x] Eliminar rutas específicas del equipo local.
+- [x] Encapsular el procesador dentro de Docker.
+- [x] Crear `setup.ps1`, `reset_lab.ps1`, `backup.ps1` y validación automática.
+- [x] Agregar healthchecks y dependencias por estado saludable.
+- [x] Crear migraciones versionadas para PostgreSQL.
+- [x] Lograr el flujo esperado:
 
 ```text
 git clone
@@ -334,8 +395,42 @@ docker compose --profile lab up -d
 ejecutar demo
 ```
 
-- [ ] Reemplazar la descarga externa de `example.com` por un servidor HTTP interno que Cowrie pueda resolver correctamente.
-- [ ] Crear un smoke test automatizado del LAB.
+- [x] Reemplazar la descarga externa de `example.com` por un servidor HTTP interno que Cowrie pueda resolver correctamente.
+- [x] Crear un smoke test automatizado del LAB.
+
+### Skills de la fase
+
+```text
+Buscados:
+- Docker Compose / Docker expert
+- Alembic / SQLAlchemy
+- PowerShell automation
+- smoke test / integration testing
+- CI/CD
+
+Instalado:
+- docker-expert
+
+Utilizado existente:
+- sqlalchemy-alembic-expert-best-practices-code-review
+
+Descartados:
+- skills de PowerShell y testing con baja adopción o repositorios de reputación insuficiente.
+```
+
+### Resultado
+
+```text
+[x] Pipeline sin Python en el host
+[x] Alembic validado en base vacía
+[x] Healthchecks sin contaminar eventos
+[x] Descargas LAB completamente offline
+[x] Setup idempotente
+[x] Backup validado
+[x] Smoke test integral superado
+[x] Idempotencia comprobada
+[x] Instalación y demo validadas desde clon limpio y volúmenes vacíos
+```
 
 ## Fase 9 — Pipeline n8n real y trazable
 

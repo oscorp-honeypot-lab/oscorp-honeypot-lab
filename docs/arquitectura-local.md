@@ -2,7 +2,7 @@
 
 ```text
 attacker-sim -> cowrie -> cowrie/logs/cowrie.json
-                         -> scripts/process_cowrie_ndjson.py
+                         -> pipeline container
                          -> PostgreSQL:eventos
                          -> Elasticsearch:cowrie-events
                          -> Kibana
@@ -19,6 +19,15 @@ cowrie
 
 n8n
   Orquestador SOAR-lite. Incluye workflow importable en n8n/workflows/.
+
+pipeline
+  Procesador Python contenerizado. No requiere Python instalado en el host.
+
+migrate
+  Ejecuta migraciones Alembic antes de iniciar consumidores de PostgreSQL.
+
+payload-server
+  Sirve payloads inocuos dentro de la red LAB para descargas completamente locales.
 
 PostgreSQL
   Persistencia estructurada de eventos, ejecuciones del pipeline y alertas.
