@@ -1,0 +1,130 @@
+{
+  "name": "OSCORP - Cowrie NDJSON Pipeline",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "0a8f2b49-4b34-49d9-9121-5fb0b43e8d0a",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "/files/cowrie/cowrie.json"
+      },
+      "id": "5d16f9c3-54ce-4c2b-95d1-4c79f0746ec7",
+      "name": "Read Cowrie Log",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -500,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst binary = $input.first().binary.data;\nconst content = Buffer.from(binary.data, 'base64').toString('utf8');\nconst rows = [];\nfor (const line of content.split(/\\r?\\n/)) {\n  const rawLine = line.trim();\n  if (!rawLine) continue;\n  const event = JSON.parse(rawLine);\n  rows.push({\n    json: {\n      event_hash: crypto.createHash('sha256').update(rawLine).digest('hex'),\n      event_uuid: event.uuid || null,\n      timestamp_evento: event.timestamp || null,\n      eventid: event.eventid || null,\n      session_id: event.session || null,\n      sensor: event.sensor || null,\n      src_ip: event.src_ip || null,\n      src_port: event.src_port || null,\n      username: event.username || null,\n      password: event.password || null,\n      command_input: event.input || null,\n      url: event.url || null,\n      shasum: event.shasum || null,\n      raw_event: event\n    }\n  });\n}\nreturn rows;"
+      },
+      "id": "d34028b8-13bf-46cc-b965-adb0be750770",
+      "name": "Parse NDJSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO eventos (event_hash, event_uuid, timestamp_evento, eventid, session_id, sensor, src_ip, src_port, username, password, command_input, url, shasum, raw_event) VALUES ('{{$json.event_hash}}', {{$json.event_uuid ? \"'\" + $json.event_uuid + \"'\" : 'NULL'}}, {{$json.timestamp_evento ? \"'\" + $json.timestamp_evento + \"'\" : 'NULL'}}, {{$json.eventid ? \"'\" + $json.eventid + \"'\" : 'NULL'}}, {{$json.session_id ? \"'\" + $json.session_id + \"'\" : 'NULL'}}, {{$json.sensor ? \"'\" + $json.sensor + \"'\" : 'NULL'}}, {{$json.src_ip ? \"'\" + $json.src_ip + \"'\" : 'NULL'}}, {{$json.src_port || 'NULL'}}, {{$json.username ? \"'\" + $json.username + \"'\" : 'NULL'}}, {{$json.password ? \"'\" + $json.password + \"'\" : 'NULL'}}, {{$json.command_input ? \"'\" + $json.command_input.replaceAll(\"'\", \"''\") + \"'\" : 'NULL'}}, {{$json.url ? \"'\" + $json.url + \"'\" : 'NULL'}}, {{$json.shasum ? \"'\" + $json.shasum + \"'\" : 'NULL'}}, '{{$json.raw_event.toJsonString().replaceAll(\"'\", \"''\")}}'::jsonb) ON CONFLICT (event_hash) DO NOTHING;"
+      },
+      "id": "ef0d28f0-2f4c-406e-8888-d398d5b28456",
+      "name": "Insert PostgreSQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        -100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_OSCORP_POSTGRES_CREDENTIAL_ID",
+          "name": "OSCORP Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://elasticsearch:9200/cowrie-events/_doc/{{$json.event_hash}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json}}"
+      },
+      "id": "061ce2ab-d14e-4c98-89e7-b31371805053",
+      "name": "Index Elasticsearch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        120
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Cowrie Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Cowrie Log": {
+      "main": [
+        [
+          {
+            "node": "Parse NDJSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse NDJSON": {
+      "main": [
+        [
+          {
+            "node": "Insert PostgreSQL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Index Elasticsearch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6e1cefd4-cddb-4e57-ac04-bc61e014a36f",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "oscorp-cowrie-ndjson-pipeline",
+  "tags": []
+}

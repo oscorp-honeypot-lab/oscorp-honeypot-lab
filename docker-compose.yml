@@ -1,0 +1,122 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: oscorp_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-oscorp}
+      POSTGRES_USER: ${POSTGRES_USER:-oscorp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oscorp123}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - oscorp_net
+    profiles:
+      - lab
+      - real
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: oscorp_elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - oscorp_net
+    profiles:
+      - lab
+      - real
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: oscorp_kibana
+    restart: unless-stopped
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - oscorp_net
+    profiles:
+      - lab
+      - real
+
+  n8n:
+    image: n8nio/n8n:${N8N_VERSION:-2.15.0}
+    container_name: oscorp_n8n
+    restart: unless-stopped
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-admin123}
+      GENERIC_TIMEZONE: America/Argentina/Mendoza
+      TZ: America/Argentina/Mendoza
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./cowrie/logs:/files/cowrie
+      - ./n8n/workflows:/files/workflows
+      - ./scripts:/files/scripts:ro
+    depends_on:
+      - postgres
+      - elasticsearch
+    networks:
+      - oscorp_net
+    profiles:
+      - lab
+      - real
+
+  cowrie:
+    image: cowrie/cowrie:3.0.0
+    container_name: oscorp_cowrie
+    restart: unless-stopped
+    ports:
+      - "${COWRIE_SSH_PORT:-2222}:2222"
+    volumes:
+      - ./cowrie/logs:/cowrie/cowrie-git/var/log/cowrie
+    networks:
+      - oscorp_net
+    profiles:
+      - lab
+
+  attacker-sim:
+    build:
+      context: ./attacker-sim
+      dockerfile: Dockerfile
+    container_name: oscorp_attacker_sim
+    restart: unless-stopped
+    depends_on:
+      - cowrie
+    volumes:
+      - ./attacker-sim:/app
+    working_dir: /app
+    command: tail -f /dev/null
+    networks:
+      - oscorp_net
+    profiles:
+      - lab
+
+networks:
+  oscorp_net:
+    name: oscorp_net
+    driver: bridge
+
+volumes:
+  postgres_data:
+  elasticsearch_data:
+  n8n_data:
