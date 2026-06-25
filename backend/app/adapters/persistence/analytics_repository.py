@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -8,12 +10,82 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.domain.analytics import (
     AnalyticsSummary,
     DownloadItem,
+    EventFilters,
     EventListItem,
     Page,
     RiskScore,
     SessionDetail,
+    SessionFilters,
     SessionListItem,
 )
+
+
+COUNTRY_EXPRESSION = """
+COALESCE(
+    e.raw_event ->> 'country',
+    e.raw_event ->> 'country_name',
+    e.raw_event #>> '{geo,country}',
+    e.raw_event #>> '{geo,country_name}',
+    e.raw_event #>> '{geoip,country}',
+    e.raw_event #>> '{geoip,country_name}'
+)
+"""
+
+SESSION_SELECT = f"""
+SELECT
+    s.session_key,
+    s.session_id,
+    s.sensor,
+    s.src_ip,
+    s.src_port,
+    s.first_event_at,
+    s.last_event_at,
+    s.duration_seconds,
+    s.lifecycle_status,
+    s.event_count,
+    s.command_count,
+    s.download_count,
+    s.first_username,
+    s.last_username,
+    s.has_successful_login,
+    (
+        SELECT {COUNTRY_EXPRESSION}
+        FROM eventos e
+        WHERE COALESCE(e.sensor, 'unknown') = s.sensor
+          AND e.session_id = s.session_id
+          AND {COUNTRY_EXPRESSION} IS NOT NULL
+        ORDER BY e.timestamp_evento, e.id
+        LIMIT 1
+    ) AS country,
+    r.score AS risk_score,
+    r.risk_level,
+    s.reviewed,
+    s.reviewed_at,
+    s.reviewed_by,
+    reviewer.username AS reviewed_by_username
+FROM sessions s
+LEFT JOIN session_risk_scores r
+  ON r.session_key = s.session_key
+ AND r.rules_version = :rules_version
+LEFT JOIN app_users reviewer ON reviewer.id = s.reviewed_by
+"""
+
+EVENT_SELECT = f"""
+SELECT
+    e.id,
+    e.timestamp_evento,
+    e.eventid,
+    e.session_id,
+    e.sensor,
+    e.src_ip,
+    e.src_port,
+    e.username,
+    e.command_input,
+    e.url,
+    e.shasum,
+    {COUNTRY_EXPRESSION} AS country
+FROM eventos e
+"""
 
 
 class PostgresAnalyticsRepository:
@@ -41,8 +113,13 @@ class PostgresAnalyticsRepository:
             download_count=row.download_count,
             username=row.last_username or row.first_username,
             has_successful_login=row.has_successful_login,
+            country=row.country,
             risk_score=row.risk_score,
             risk_level=row.risk_level,
+            reviewed=row.reviewed,
+            reviewed_at=row.reviewed_at,
+            reviewed_by=row.reviewed_by,
+            reviewed_by_username=row.reviewed_by_username,
         )
 
     @staticmethod
@@ -59,6 +136,112 @@ class PostgresAnalyticsRepository:
             command=row.command_input,
             url=row.url,
             sha256=row.shasum,
+            country=row.country,
+        )
+
+    @staticmethod
+    def _session_filter_sql(
+        filters: SessionFilters,
+    ) -> tuple[str, dict[str, object]]:
+        clauses: list[str] = []
+        params: dict[str, object] = {}
+        if filters.from_at is not None:
+            clauses.append("s.last_event_at >= :from_at")
+            params["from_at"] = filters.from_at
+        if filters.to_at is not None:
+            clauses.append("s.first_event_at <= :to_at")
+            params["to_at"] = filters.to_at
+        if filters.src_ip:
+            clauses.append("s.src_ip = :src_ip")
+            params["src_ip"] = filters.src_ip
+        if filters.username:
+            clauses.append(
+                """
+                EXISTS (
+                    SELECT 1
+                    FROM eventos eu
+                    WHERE COALESCE(eu.sensor, 'unknown') = s.sensor
+                      AND eu.session_id = s.session_id
+                      AND LOWER(eu.username) = LOWER(:username)
+                )
+                """
+            )
+            params["username"] = filters.username
+        if filters.event_type:
+            clauses.append(
+                """
+                EXISTS (
+                    SELECT 1
+                    FROM eventos et
+                    WHERE COALESCE(et.sensor, 'unknown') = s.sensor
+                      AND et.session_id = s.session_id
+                      AND et.eventid = :event_type
+                )
+                """
+            )
+            params["event_type"] = filters.event_type
+        if filters.country:
+            clauses.append(
+                f"""
+                EXISTS (
+                    SELECT 1
+                    FROM eventos ec
+                    WHERE COALESCE(ec.sensor, 'unknown') = s.sensor
+                      AND ec.session_id = s.session_id
+                      AND LOWER(
+                          COALESCE(
+                              ec.raw_event ->> 'country',
+                              ec.raw_event ->> 'country_name',
+                              ec.raw_event #>> '{{geo,country}}',
+                              ec.raw_event #>> '{{geo,country_name}}',
+                              ec.raw_event #>> '{{geoip,country}}',
+                              ec.raw_event #>> '{{geoip,country_name}}'
+                          )
+                      ) = LOWER(:country)
+                )
+                """
+            )
+            params["country"] = filters.country
+        if filters.risk_level:
+            clauses.append("r.risk_level = :risk_level")
+            params["risk_level"] = filters.risk_level
+        if filters.reviewed is not None:
+            clauses.append("s.reviewed = :reviewed")
+            params["reviewed"] = filters.reviewed
+        return (
+            " WHERE " + " AND ".join(clauses) if clauses else "",
+            params,
+        )
+
+    @staticmethod
+    def _event_filter_sql(
+        filters: EventFilters,
+    ) -> tuple[str, dict[str, object]]:
+        clauses: list[str] = []
+        params: dict[str, object] = {}
+        if filters.from_at is not None:
+            clauses.append("e.timestamp_evento >= :from_at")
+            params["from_at"] = filters.from_at
+        if filters.to_at is not None:
+            clauses.append("e.timestamp_evento <= :to_at")
+            params["to_at"] = filters.to_at
+        if filters.src_ip:
+            clauses.append("e.src_ip = :src_ip")
+            params["src_ip"] = filters.src_ip
+        if filters.username:
+            clauses.append("LOWER(e.username) = LOWER(:username)")
+            params["username"] = filters.username
+        if filters.event_type:
+            clauses.append("e.eventid = :event_type")
+            params["event_type"] = filters.event_type
+        if filters.country:
+            clauses.append(
+                f"LOWER({COUNTRY_EXPRESSION}) = LOWER(:country)"
+            )
+            params["country"] = filters.country
+        return (
+            " WHERE " + " AND ".join(clauses) if clauses else "",
+            params,
         )
 
     async def summary(self, *, rules_version: str) -> AnalyticsSummary:
@@ -122,48 +305,36 @@ class PostgresAnalyticsRepository:
         page: int,
         page_size: int,
         rules_version: str,
+        filters: SessionFilters,
     ) -> Page[SessionListItem]:
         offset = (page - 1) * page_size
+        where_sql, params = self._session_filter_sql(filters)
+        params["rules_version"] = rules_version
         async with self._session_factory() as session:
-            total = int(
-                (
-                    await session.execute(text("SELECT COUNT(*) FROM sessions"))
-                ).scalar_one()
-            )
-            result = await session.execute(
+            total_result = await session.execute(
                 text(
                     """
-                    SELECT
-                        s.session_key,
-                        s.session_id,
-                        s.sensor,
-                        s.src_ip,
-                        s.src_port,
-                        s.first_event_at,
-                        s.last_event_at,
-                        s.duration_seconds,
-                        s.lifecycle_status,
-                        s.event_count,
-                        s.command_count,
-                        s.download_count,
-                        s.first_username,
-                        s.last_username,
-                        s.has_successful_login,
-                        r.score AS risk_score,
-                        r.risk_level
+                    SELECT COUNT(*)
                     FROM sessions s
                     LEFT JOIN session_risk_scores r
                       ON r.session_key = s.session_key
                      AND r.rules_version = :rules_version
+                    """
+                    + where_sql
+                ),
+                params,
+            )
+            total = int(total_result.scalar_one())
+            result = await session.execute(
+                text(
+                    SESSION_SELECT
+                    + where_sql
+                    + """
                     ORDER BY s.last_event_at DESC, s.session_key
                     LIMIT :limit OFFSET :offset
                     """
                 ),
-                {
-                    "rules_version": rules_version,
-                    "limit": page_size,
-                    "offset": offset,
-                },
+                {**params, "limit": page_size, "offset": offset},
             )
             items = tuple(self._session_item(row) for row in result)
         return Page(items=items, page=page, page_size=page_size, total=total)
@@ -173,35 +344,26 @@ class PostgresAnalyticsRepository:
         *,
         page: int,
         page_size: int,
+        filters: EventFilters,
     ) -> Page[EventListItem]:
         offset = (page - 1) * page_size
+        where_sql, params = self._event_filter_sql(filters)
         async with self._session_factory() as session:
-            total = int(
-                (
-                    await session.execute(text("SELECT COUNT(*) FROM eventos"))
-                ).scalar_one()
+            total_result = await session.execute(
+                text("SELECT COUNT(*) FROM eventos e" + where_sql),
+                params,
             )
+            total = int(total_result.scalar_one())
             result = await session.execute(
                 text(
-                    """
-                    SELECT
-                        id,
-                        timestamp_evento,
-                        eventid,
-                        session_id,
-                        sensor,
-                        src_ip,
-                        src_port,
-                        username,
-                        command_input,
-                        url,
-                        shasum
-                    FROM eventos
-                    ORDER BY timestamp_evento DESC NULLS LAST, id DESC
+                    EVENT_SELECT
+                    + where_sql
+                    + """
+                    ORDER BY e.timestamp_evento DESC NULLS LAST, e.id DESC
                     LIMIT :limit OFFSET :offset
                     """
                 ),
-                {"limit": page_size, "offset": offset},
+                {**params, "limit": page_size, "offset": offset},
             )
             items = tuple(self._event_item(row) for row in result)
         return Page(items=items, page=page, page_size=page_size, total=total)
@@ -214,36 +376,7 @@ class PostgresAnalyticsRepository:
     ) -> SessionDetail | None:
         async with self._session_factory() as session:
             result = await session.execute(
-                text(
-                    """
-                    SELECT
-                        s.session_key,
-                        s.session_id,
-                        s.sensor,
-                        s.src_ip,
-                        s.src_port,
-                        s.first_event_at,
-                        s.last_event_at,
-                        s.duration_seconds,
-                        s.lifecycle_status,
-                        s.event_count,
-                        s.command_count,
-                        s.download_count,
-                        s.first_username,
-                        s.last_username,
-                        s.has_successful_login,
-                        r.score AS risk_score,
-                        r.risk_level,
-                        r.reasons,
-                        r.rules_version,
-                        r.calculated_at
-                    FROM sessions s
-                    LEFT JOIN session_risk_scores r
-                      ON r.session_key = s.session_key
-                     AND r.rules_version = :rules_version
-                    WHERE s.session_key = :session_key
-                    """
-                ),
+                text(SESSION_SELECT + " WHERE s.session_key = :session_key"),
                 {
                     "session_key": session_key,
                     "rules_version": rules_version,
@@ -255,23 +388,11 @@ class PostgresAnalyticsRepository:
 
             events_result = await session.execute(
                 text(
-                    """
-                    SELECT
-                        id,
-                        timestamp_evento,
-                        eventid,
-                        session_id,
-                        sensor,
-                        src_ip,
-                        src_port,
-                        username,
-                        command_input,
-                        url,
-                        shasum
-                    FROM eventos
-                    WHERE COALESCE(sensor, 'unknown') = :sensor
-                      AND session_id = :session_id
-                    ORDER BY timestamp_evento, id
+                    EVENT_SELECT
+                    + """
+                    WHERE COALESCE(e.sensor, 'unknown') = :sensor
+                      AND e.session_id = :session_id
+                    ORDER BY e.timestamp_evento, e.id
                     """
                 ),
                 {
@@ -282,13 +403,17 @@ class PostgresAnalyticsRepository:
             events = tuple(self._event_item(row) for row in events_result)
 
         score = None
-        if session_row.risk_score is not None:
+        score_result = await self._get_score(
+            session_key=session_key,
+            rules_version=rules_version,
+        )
+        if score_result is not None:
             score = RiskScore(
-                score=session_row.risk_score,
-                level=session_row.risk_level,
-                reasons=tuple(session_row.reasons),
-                rules_version=session_row.rules_version,
-                calculated_at=session_row.calculated_at,
+                score=score_result.score,
+                level=score_result.risk_level,
+                reasons=tuple(score_result.reasons),
+                rules_version=score_result.rules_version,
+                calculated_at=score_result.calculated_at,
             )
         return SessionDetail(
             session=self._session_item(session_row),
@@ -309,3 +434,100 @@ class PostgresAnalyticsRepository:
             ),
             events=events,
         )
+
+    async def _get_score(self, *, session_key: str, rules_version: str) -> Any:
+        async with self._session_factory() as session:
+            result = await session.execute(
+                text(
+                    """
+                    SELECT score, risk_level, reasons, rules_version, calculated_at
+                    FROM session_risk_scores
+                    WHERE session_key = :session_key
+                      AND rules_version = :rules_version
+                    """
+                ),
+                {
+                    "session_key": session_key,
+                    "rules_version": rules_version,
+                },
+            )
+            return result.first()
+
+    async def set_session_review(
+        self,
+        *,
+        session_key: str,
+        reviewed: bool,
+        actor_id: UUID,
+        client_ip: str,
+        user_agent: str,
+    ) -> SessionListItem | None:
+        async with self._session_factory.begin() as session:
+            update = await session.execute(
+                text(
+                    """
+                    UPDATE sessions
+                    SET reviewed = :reviewed,
+                        reviewed_at = CASE WHEN :reviewed THEN NOW() ELSE NULL END,
+                        reviewed_by = CASE
+                            WHEN :reviewed THEN :actor_id
+                            ELSE NULL
+                        END,
+                        updated_at = NOW()
+                    WHERE session_key = :session_key
+                    RETURNING session_key
+                    """
+                ),
+                {
+                    "session_key": session_key,
+                    "reviewed": reviewed,
+                    "actor_id": actor_id,
+                },
+            )
+            if update.first() is None:
+                return None
+            await session.execute(
+                text(
+                    """
+                    INSERT INTO app_audit_log (
+                        user_id,
+                        action,
+                        outcome,
+                        client_ip,
+                        user_agent,
+                        details
+                    )
+                    VALUES (
+                        :user_id,
+                        'session.review',
+                        'success',
+                        :client_ip,
+                        :user_agent,
+                        CAST(:details AS jsonb)
+                    )
+                    """
+                ),
+                {
+                    "user_id": actor_id,
+                    "client_ip": client_ip,
+                    "user_agent": user_agent,
+                    "details": json.dumps(
+                        {
+                            "session_key": session_key,
+                            "reviewed": reviewed,
+                        },
+                        separators=(",", ":"),
+                    ),
+                },
+            )
+            result = await session.execute(
+                text(
+                    SESSION_SELECT
+                    + " WHERE s.session_key = :session_key"
+                ),
+                {
+                    "session_key": session_key,
+                    "rules_version": "1.0.0",
+                },
+            )
+            return self._session_item(result.one())

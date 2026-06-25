@@ -129,7 +129,12 @@ def analytics_session() -> dict[str, object]:
                         command,
                         url,
                         sha256,
-                        json.dumps({"password": "must-not-leak"}),
+                        json.dumps(
+                            {
+                                "password": "must-not-leak",
+                                "country": "Argentina",
+                            }
+                        ),
                     ),
                 )
             cursor.execute(
@@ -216,8 +221,8 @@ def login(client: TestClient) -> None:
     assert response.status_code == 200
 
 
-def create_viewer() -> tuple[str, str]:
-    username = f"test_analytics_{uuid4().hex[:10]}"
+def create_user(role: str) -> tuple[str, str]:
+    username = f"test_analytics_{role}_{uuid4().hex[:10]}"
     password = "A-secure-test-password-18!"
     with TestClient(app) as client:
         login(client)
@@ -228,7 +233,7 @@ def create_viewer() -> tuple[str, str]:
             json={
                 "username": username,
                 "password": password,
-                "role": "viewer",
+                "role": role,
             },
         )
         assert response.status_code == 201
@@ -244,7 +249,7 @@ def test_analytics_endpoints_require_authentication() -> None:
 
 
 def test_viewer_can_read_analytics() -> None:
-    username, password = create_viewer()
+    username, password = create_user("viewer")
     with TestClient(app) as client:
         response = client.post(
             "/api/v1/auth/login",
@@ -254,6 +259,112 @@ def test_viewer_can_read_analytics() -> None:
         assert client.get("/api/v1/analytics/summary").status_code == 200
         assert client.get("/api/v1/sessions").status_code == 200
         assert client.get("/api/v1/events").status_code == 200
+
+
+def test_combined_filters(
+    analytics_session: dict[str, object],
+) -> None:
+    with TestClient(app) as client:
+        login(client)
+        query = (
+            "?src_ip=203.0.113.18"
+            "&country=argentina"
+            "&username=ROOT"
+            "&event_type=cowrie.session.file_download"
+            "&risk_level=high"
+            "&reviewed=false"
+            "&from=2026-06-25T17:00:00Z"
+            "&to=2026-06-25T19:00:00Z"
+        )
+        sessions = client.get("/api/v1/sessions" + query)
+        assert sessions.status_code == 200
+        assert sessions.json()["pagination"]["total"] == 1
+        assert sessions.json()["items"][0]["session_key"] == (
+            analytics_session["session_key"]
+        )
+        assert sessions.json()["items"][0]["country"] == "Argentina"
+
+        events = client.get(
+            "/api/v1/events"
+            "?src_ip=203.0.113.18"
+            "&country=argentina"
+            "&username=root"
+            "&event_type=cowrie.command.input"
+        )
+        assert events.status_code == 200
+        assert events.json()["pagination"]["total"] == 1
+        assert events.json()["items"][0]["command"] == "whoami"
+
+
+def test_review_transitions_require_analyst(
+    analytics_session: dict[str, object],
+) -> None:
+    viewer_username, viewer_password = create_user("viewer")
+    analyst_username, analyst_password = create_user("analyst")
+
+    with TestClient(app) as viewer:
+        assert viewer.post(
+            "/api/v1/auth/login",
+            json={"username": viewer_username, "password": viewer_password},
+        ).status_code == 200
+        csrf = viewer.cookies.get("oscorp_csrf")
+        response = viewer.patch(
+            f"/api/v1/sessions/{analytics_session['session_key']}/review",
+            headers={"X-CSRF-Token": csrf},
+            json={"reviewed": True},
+        )
+        assert response.status_code == 403
+
+    with TestClient(app) as analyst:
+        assert analyst.post(
+            "/api/v1/auth/login",
+            json={"username": analyst_username, "password": analyst_password},
+        ).status_code == 200
+        csrf = analyst.cookies.get("oscorp_csrf")
+        endpoint = (
+            f"/api/v1/sessions/{analytics_session['session_key']}/review"
+        )
+        reviewed = analyst.patch(
+            endpoint,
+            headers={"X-CSRF-Token": csrf},
+            json={"reviewed": True},
+        )
+        assert reviewed.status_code == 200
+        assert reviewed.json()["reviewed"] is True
+        assert reviewed.json()["reviewed_at"] is not None
+        assert reviewed.json()["reviewed_by_username"] == analyst_username
+
+        filtered = analyst.get("/api/v1/sessions?reviewed=true")
+        assert filtered.status_code == 200
+        assert any(
+            item["session_key"] == analytics_session["session_key"]
+            for item in filtered.json()["items"]
+        )
+
+        cleared = analyst.patch(
+            endpoint,
+            headers={"X-CSRF-Token": csrf},
+            json={"reviewed": False},
+        )
+        assert cleared.status_code == 200
+        assert cleared.json()["reviewed"] is False
+        assert cleared.json()["reviewed_at"] is None
+        assert cleared.json()["reviewed_by"] is None
+
+    with psycopg.connect(database_dsn()) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*)
+                FROM app_audit_log a
+                JOIN app_users u ON u.id = a.user_id
+                WHERE u.username = %s
+                  AND a.action = 'session.review'
+                  AND a.outcome = 'success'
+                """,
+                (analyst_username,),
+            )
+            assert cursor.fetchone()[0] == 2
 
 
 def test_summary_and_paginated_reads(

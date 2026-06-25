@@ -57,12 +57,18 @@ POST /api/v1/users
 GET  /api/v1/analytics/summary
 GET  /api/v1/sessions
 GET  /api/v1/sessions/{session_key}
+PATCH /api/v1/sessions/{session_key}/review
 GET  /api/v1/events
 ```
 
 Las lecturas analíticas requieren una sesión autenticada. Los listados usan
 `page` y `page_size` con un máximo de 100 elementos, y no exponen contraseñas
 ni el evento crudo almacenado.
+
+Sesiones y eventos aceptan filtros combinables por `from`, `to`, `src_ip`,
+`country`, `username` y `event_type`. Las sesiones también permiten
+`risk_level` y `reviewed`. Marcar una sesión como revisada requiere rol
+`analyst` o `admin` y token CSRF.
 
 ## Generar eventos de ataque
 

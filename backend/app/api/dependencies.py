@@ -68,33 +68,42 @@ def require_role(required: Role) -> Callable[..., UserIdentity]:
     return dependency
 
 
-async def require_admin_csrf(
-    request: Request,
-    service: Annotated[AuthService, Depends(get_auth_service)],
-    csrf_token: Annotated[str | None, Header(alias="X-CSRF-Token")] = None,
-) -> UserIdentity:
-    settings = request.app.state.settings
-    try:
-        user, _ = await service.authenticate(
-            session_token=request.cookies.get(settings.session_cookie_name),
-            csrf_token=csrf_token,
-            require_csrf=True,
-            client_ip=client_ip(request),
-            user_agent=user_agent(request),
-        )
-    except AuthenticationRequired as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="authentication_required",
-        ) from exc
-    except CsrfFailed as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="csrf_validation_failed",
-        ) from exc
-    if not user.role.allows(Role.ADMIN):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="insufficient_permissions",
-        )
-    return user
+def require_role_csrf(required: Role) -> Callable[..., UserIdentity]:
+    async def dependency(
+        request: Request,
+        service: Annotated[AuthService, Depends(get_auth_service)],
+        csrf_token: Annotated[
+            str | None,
+            Header(alias="X-CSRF-Token"),
+        ] = None,
+    ) -> UserIdentity:
+        settings = request.app.state.settings
+        try:
+            user, _ = await service.authenticate(
+                session_token=request.cookies.get(settings.session_cookie_name),
+                csrf_token=csrf_token,
+                require_csrf=True,
+                client_ip=client_ip(request),
+                user_agent=user_agent(request),
+            )
+        except AuthenticationRequired as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="authentication_required",
+            ) from exc
+        except CsrfFailed as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="csrf_validation_failed",
+            ) from exc
+        if not user.role.allows(required):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="insufficient_permissions",
+            )
+        return user
+
+    return dependency
+
+
+require_admin_csrf = require_role_csrf(Role.ADMIN)

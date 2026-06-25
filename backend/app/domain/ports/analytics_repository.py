@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from typing import Protocol
+from uuid import UUID
 
 from app.domain.analytics import (
     AnalyticsSummary,
+    EventFilters,
     EventListItem,
     Page,
     SessionDetail,
+    SessionFilters,
     SessionListItem,
 )
 
@@ -20,6 +23,7 @@ class AnalyticsRepository(Protocol):
         page: int,
         page_size: int,
         rules_version: str,
+        filters: SessionFilters,
     ) -> Page[SessionListItem]: ...
 
     async def list_events(
@@ -27,6 +31,7 @@ class AnalyticsRepository(Protocol):
         *,
         page: int,
         page_size: int,
+        filters: EventFilters,
     ) -> Page[EventListItem]: ...
 
     async def get_session(
@@ -35,3 +40,13 @@ class AnalyticsRepository(Protocol):
         session_key: str,
         rules_version: str,
     ) -> SessionDetail | None: ...
+
+    async def set_session_review(
+        self,
+        *,
+        session_key: str,
+        reviewed: bool,
+        actor_id: UUID,
+        client_ip: str,
+        user_agent: str,
+    ) -> SessionListItem | None: ...

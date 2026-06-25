@@ -2,22 +2,37 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from datetime import datetime
 
-from app.api.dependencies import get_analytics_service, require_role
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+
+from app.api.dependencies import (
+    client_ip,
+    get_analytics_service,
+    require_role,
+    require_role_csrf,
+    user_agent,
+)
 from app.api.schemas import (
     AnalyticsSummaryResponse,
     EventPageResponse,
     SessionDetailResponse,
+    SessionListItemResponse,
     SessionPageResponse,
+    SessionReviewRequest,
 )
 from app.application.analytics_service import AnalyticsService, SessionNotFound
+from app.domain.analytics import EventFilters, SessionFilters
 from app.domain.identity import Role, UserIdentity
 
 
 router = APIRouter(tags=["analytics"])
 Viewer = Annotated[UserIdentity, Depends(require_role(Role.VIEWER))]
 Service = Annotated[AnalyticsService, Depends(get_analytics_service)]
+AnalystCsrf = Annotated[
+    UserIdentity,
+    Depends(require_role_csrf(Role.ANALYST)),
+]
 
 
 @router.get("/analytics/summary", response_model=AnalyticsSummaryResponse)
@@ -31,8 +46,32 @@ async def sessions(
     service: Service,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 50,
+    from_at: Annotated[datetime | None, Query(alias="from")] = None,
+    to_at: Annotated[datetime | None, Query(alias="to")] = None,
+    src_ip: Annotated[str | None, Query(max_length=64)] = None,
+    country: Annotated[str | None, Query(max_length=128)] = None,
+    username: Annotated[str | None, Query(max_length=128)] = None,
+    event_type: Annotated[str | None, Query(max_length=128)] = None,
+    risk_level: Annotated[
+        str | None,
+        Query(pattern=r"^(low|medium|high|critical)$"),
+    ] = None,
+    reviewed: bool | None = None,
 ) -> SessionPageResponse:
-    result = await service.list_sessions(page=page, page_size=page_size)
+    result = await service.list_sessions(
+        page=page,
+        page_size=page_size,
+        filters=SessionFilters(
+            from_at=from_at,
+            to_at=to_at,
+            src_ip=src_ip,
+            country=country,
+            username=username,
+            event_type=event_type,
+            risk_level=risk_level,
+            reviewed=reviewed,
+        ),
+    )
     return SessionPageResponse.from_domain(result)
 
 
@@ -42,8 +81,25 @@ async def events(
     service: Service,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 50,
+    from_at: Annotated[datetime | None, Query(alias="from")] = None,
+    to_at: Annotated[datetime | None, Query(alias="to")] = None,
+    src_ip: Annotated[str | None, Query(max_length=64)] = None,
+    country: Annotated[str | None, Query(max_length=128)] = None,
+    username: Annotated[str | None, Query(max_length=128)] = None,
+    event_type: Annotated[str | None, Query(max_length=128)] = None,
 ) -> EventPageResponse:
-    result = await service.list_events(page=page, page_size=page_size)
+    result = await service.list_events(
+        page=page,
+        page_size=page_size,
+        filters=EventFilters(
+            from_at=from_at,
+            to_at=to_at,
+            src_ip=src_ip,
+            country=country,
+            username=username,
+            event_type=event_type,
+        ),
+    )
     return EventPageResponse.from_domain(result)
 
 
@@ -61,3 +117,30 @@ async def session_detail(
             detail="session_not_found",
         ) from exc
     return SessionDetailResponse.from_domain(detail)
+
+
+@router.patch(
+    "/sessions/{session_key}/review",
+    response_model=SessionListItemResponse,
+)
+async def review_session(
+    session_key: str,
+    payload: SessionReviewRequest,
+    request: Request,
+    actor: AnalystCsrf,
+    service: Service,
+) -> SessionListItemResponse:
+    try:
+        session = await service.set_session_review(
+            session_key=session_key,
+            reviewed=payload.reviewed,
+            actor=actor,
+            client_ip=client_ip(request),
+            user_agent=user_agent(request),
+        )
+    except SessionNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="session_not_found",
+        ) from exc
+    return SessionListItemResponse.model_validate(session)

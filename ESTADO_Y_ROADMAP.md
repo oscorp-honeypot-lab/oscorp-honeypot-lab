@@ -220,7 +220,7 @@ La validación operativa más reciente confirmó:
 - nueve servicios persistentes del perfil LAB operativos;
 - configuración Docker Compose válida;
 - PostgreSQL y Elasticsearch sincronizados en 2136 registros;
-- revisión Alembic 0006_identity_security aplicada y en head;
+- revisión Alembic 0007_session_review aplicada y en head;
 - diecisiete scripts PowerShell sin errores de sintaxis;
 - parser y migraciones Python válidos dentro del contenedor no-root;
 - artefactos y evidencia de instalación desde clon limpio presentes;
@@ -279,6 +279,11 @@ La validación operativa más reciente confirmó:
 - Fase 18 reproducida desde clon limpio y base vacía con 15 pruebas backend,
   20 pruebas pipeline, 105 eventos, 15 sesiones/scores, API analítica
   protegida e idempotencia confirmada.
+- filtros combinables de Fase 19 verificados para sesiones y eventos;
+- revisión operativa protegida para analyst/admin y auditada;
+- 17 pruebas backend y 20 pruebas pipeline superadas;
+- smoke de Fase 19 finalizado con 2346 eventos, 383 sesiones/scores
+  y segunda ingesta en cero.
 ```
 
 Se verificaron los nueve servicios persistentes del perfil LAB en ejecución:
@@ -372,15 +377,15 @@ Estado acumulado de la validación más reciente:
 
 ```text
 PostgreSQL:
-- 2241 eventos
-- 2241 event_hash únicos
-- 368 sesiones
-- 63 ejecuciones en pipeline_runs
-- último run_id: 95
+- 2346 eventos
+- 2346 event_hash únicos
+- 383 sesiones
+- 66 ejecuciones en pipeline_runs
+- último run_id: 98
 - 1 evento inválido en cuarentena
 
 Elasticsearch:
-- 2241 documentos en cowrie-events
+- 2346 documentos en cowrie-events
 
 n8n:
 - versión efectiva 2.15.0
@@ -391,7 +396,7 @@ pipeline-worker:
 - contrato 1.0
 - servicio privado sin puerto publicado
 - ejecución concurrente protegida por lock
-- checkpoint en byte 654101, línea 1168
+- checkpoint en byte 713301, línea 1273
 
 Kibana:
 - estado general available
@@ -415,6 +420,7 @@ docs/evidencias/fase15_calculo_persistencia_risk_score.md
 docs/evidencias/fase16_base_api.md
 docs/evidencias/fase17_identidad_seguridad.md
 docs/evidencias/fase18_api_consulta_analitica.md
+docs/evidencias/fase19_filtros_revision.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -911,10 +917,22 @@ Objetivo: exponer los datos principales para el dashboard.
 
 Objetivo: soportar el trabajo de análisis sobre las sesiones.
 
-- [ ] Filtrar por tiempo, IP, país, usuario, evento y criticidad.
-- [ ] Permitir marcar y desmarcar sesiones como revisadas.
-- [ ] Registrar fecha y estado de revisión.
-- [ ] Probar filtros combinados y transiciones de estado.
+- [x] Filtrar por tiempo, IP, país, usuario, evento y criticidad.
+- [x] Permitir marcar y desmarcar sesiones como revisadas.
+- [x] Registrar fecha y estado de revisión.
+- [x] Probar filtros combinados y transiciones de estado.
+
+### Resultado
+
+```text
+[x] migración 0007_session_review
+[x] filtros combinables con parámetros SQL enlazados
+[x] país preparado para datos enriquecidos
+[x] revisión protegida por rol analyst y CSRF
+[x] actor, fecha y auditoría de transiciones
+[x] 17 pruebas backend, 20 pruebas pipeline y smoke integral
+[ ] clon limpio diferido a Fase 20 para validar ambas fases juntas
+```
 
 ## Fase 20 — API de exportación
 

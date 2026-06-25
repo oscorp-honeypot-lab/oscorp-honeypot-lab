@@ -174,7 +174,7 @@ services:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    image: oscorp/pipeline:phase17
+    image: oscorp/pipeline:phase19
     pull_policy: never
     container_name: oscorp_payload_server
     restart: unless-stopped
@@ -208,7 +208,7 @@ services:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    image: oscorp/pipeline:phase17
+    image: oscorp/pipeline:phase19
     pull_policy: never
     container_name: oscorp_migrate
     command:
@@ -230,7 +230,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    image: oscorp/backend:phase18
+    image: oscorp/backend:phase19
     pull_policy: never
     container_name: oscorp_backend
     restart: unless-stopped
@@ -269,7 +269,7 @@ services:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    image: oscorp/pipeline:phase17
+    image: oscorp/pipeline:phase19
     pull_policy: never
     container_name: oscorp_pipeline_worker
     restart: unless-stopped
@@ -312,7 +312,7 @@ services:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    image: oscorp/pipeline:phase17
+    image: oscorp/pipeline:phase19
     pull_policy: never
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-oscorp}:${POSTGRES_PASSWORD:-oscorp123}@postgres:5432/${POSTGRES_DB:-oscorp}

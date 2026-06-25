@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from math import ceil
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
@@ -109,8 +110,13 @@ class SessionListItemResponse(BaseModel):
     download_count: int
     username: str | None
     has_successful_login: bool
+    country: str | None
     risk_score: int | None
     risk_level: str | None
+    reviewed: bool
+    reviewed_at: datetime | None
+    reviewed_by: UUID | None
+    reviewed_by_username: str | None
 
 
 class EventListItemResponse(BaseModel):
@@ -127,6 +133,7 @@ class EventListItemResponse(BaseModel):
     command: str | None
     url: str | None
     sha256: str | None
+    country: str | None
 
 
 class PaginationResponse(BaseModel):
@@ -203,3 +210,7 @@ class SessionDetailResponse(BaseModel):
     @classmethod
     def from_domain(cls, detail: SessionDetail) -> "SessionDetailResponse":
         return cls.model_validate(detail)
+
+
+class SessionReviewRequest(BaseModel):
+    reviewed: bool

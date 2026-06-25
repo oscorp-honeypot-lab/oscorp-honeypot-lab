@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Generic, TypeVar
+from uuid import UUID
 
 
 T = TypeVar("T")
@@ -31,6 +32,28 @@ class AnalyticsSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class SessionFilters:
+    from_at: datetime | None = None
+    to_at: datetime | None = None
+    src_ip: str | None = None
+    country: str | None = None
+    username: str | None = None
+    event_type: str | None = None
+    risk_level: str | None = None
+    reviewed: bool | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EventFilters:
+    from_at: datetime | None = None
+    to_at: datetime | None = None
+    src_ip: str | None = None
+    country: str | None = None
+    username: str | None = None
+    event_type: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class RiskScore:
     score: int
     level: str
@@ -55,8 +78,13 @@ class SessionListItem:
     download_count: int
     username: str | None
     has_successful_login: bool
+    country: str | None
     risk_score: int | None
     risk_level: str | None
+    reviewed: bool
+    reviewed_at: datetime | None
+    reviewed_by: UUID | None
+    reviewed_by_username: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +100,7 @@ class EventListItem:
     command: str | None
     url: str | None
     sha256: str | None
+    country: str | None
 
 
 @dataclass(frozen=True, slots=True)
