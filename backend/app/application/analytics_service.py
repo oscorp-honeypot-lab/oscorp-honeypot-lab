@@ -8,6 +8,7 @@ from app.domain.analytics import (
     SessionDetail,
     SessionFilters,
     SessionListItem,
+    TimelinePoint,
 )
 from app.domain.ports.analytics_repository import AnalyticsRepository
 from app.domain.identity import UserIdentity
@@ -29,6 +30,9 @@ class AnalyticsService:
 
     async def summary(self) -> AnalyticsSummary:
         return await self._repository.summary(rules_version=self._rules_version)
+
+    async def timeline(self, *, hours: int) -> tuple[TimelinePoint, ...]:
+        return await self._repository.timeline(hours=hours)
 
     async def list_sessions(
         self,

@@ -200,7 +200,7 @@ Payloads offline:                           Implementados y validados
 Smoke test LAB:                             Implementado y superado
 Workflow n8n:                               Orquestación punta a punta implementada en Fase 10
 Kibana:                                     Servicio disponible; dashboards pendientes
-Aplicación web propia:                      Backend seguro con API analítica; frontend pendiente
+Aplicación web propia:                      Dashboard React inicial operativo; tabla pendiente
 Attack Risk Score:                          Implementado, persistido y validado en Fase 15
 Alertas Telegram y MTTD real:               No implementados en la reestructuración
 VirusTotal e ip-api:                        No implementados en la reestructuración
@@ -217,7 +217,7 @@ Actualización final de la tesis:            Pendiente hasta finalizar el sistem
 La validación operativa más reciente confirmó:
 
 ```text
-- nueve servicios persistentes del perfil LAB operativos;
+- diez servicios persistentes del perfil LAB operativos;
 - configuración Docker Compose válida;
 - PostgreSQL y Elasticsearch sincronizados en 2136 registros;
 - revisión Alembic 0008_export_runs aplicada y en head;
@@ -294,9 +294,16 @@ La validación operativa más reciente confirmó:
 - migración 0008 en head, 20 pruebas backend y 20 pruebas pipeline;
 - filtros, revisión, CSV, metadatos, 105 eventos, 15 sesiones/scores
   e idempotencia confirmados.
+- frontend React de Fase 21.1 disponible como décimo servicio del LAB;
+- rutas, control de sesión y cliente TypeScript generado desde OpenAPI;
+- TanStack Query consumiendo resumen y evolución temporal;
+- dashboard con métricas, timeline y distribución de riesgo en ECharts;
+- build y 2 pruebas frontend, 20 backend y 20 pipeline superados;
+- login y dashboard verificados en navegador desktop y móvil sin errores;
+- contenedor frontend no-root corregido y validado sin errores de permisos.
 ```
 
-Se verificaron los nueve servicios persistentes del perfil LAB en ejecución:
+Se verificaron los diez servicios persistentes del perfil LAB en ejecución:
 
 ```text
 oscorp_cowrie
@@ -308,6 +315,7 @@ oscorp_n8n
 oscorp_pipeline_worker
 oscorp_payload_server
 oscorp_backend
+oscorp_frontend
 ```
 
 El servicio transitorio `migrate` completó Alembic correctamente antes de iniciar los consumidores.
@@ -322,6 +330,7 @@ n8n:           versión efectiva 2.15.0
 Cowrie:        accesible desde attacker-sim en cowrie:2222
 Payloads:      accesibles únicamente dentro de la red LAB
 Backend:       FastAPI disponible en http://localhost:8000
+Frontend:      React disponible en http://localhost:5173
 ```
 
 Se ejecutó el smoke test completo:
@@ -432,6 +441,7 @@ docs/evidencias/fase17_identidad_seguridad.md
 docs/evidencias/fase18_api_consulta_analitica.md
 docs/evidencias/fase19_filtros_revision.md
 docs/evidencias/fase20_exportacion_csv.md
+docs/evidencias/fase21_1_base_dashboard.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -970,11 +980,26 @@ Objetivo: permitir extraer datos sin depender de Kibana.
 
 Objetivo: crear la primera interfaz propia utilizable.
 
-- [ ] Crear React + TypeScript + Vite con rutas, layout operativo y control de sesión.
-- [ ] Generar el cliente TypeScript desde OpenAPI y consumirlo con TanStack Query.
-- [ ] Crear resumen, evolución temporal y distribución de riesgo con Apache ECharts.
+- [x] Crear React + TypeScript + Vite con rutas, layout operativo y control de sesión.
+- [x] Generar el cliente TypeScript desde OpenAPI y consumirlo con TanStack Query.
+- [x] Crear resumen, evolución temporal y distribución de riesgo con Apache ECharts.
 - [ ] Crear tabla de sesiones con TanStack Table, filtros, paginación y ordenamiento.
 - [ ] Definir componentes accesibles, diseño responsive y estados de carga, vacío y error.
+
+### Resultado parcial
+
+```text
+[x] servicio frontend Docker no-root y saludable
+[x] login y logout basados en cookies de servidor
+[x] cliente TypeScript generado desde OpenAPI
+[x] TanStack Query para sesión, resumen y timeline
+[x] endpoint horario de 1 a 720 horas
+[x] métricas, evolución temporal y distribución de riesgo
+[x] validación desktop 1280x720 y móvil 390x844
+[x] 2 pruebas frontend, 20 backend y 20 pipeline
+[ ] tabla de sesiones
+[ ] cierre completo de accesibilidad y estados
+```
 
 ## Fase 22 — Detalle interactivo de sesión
 

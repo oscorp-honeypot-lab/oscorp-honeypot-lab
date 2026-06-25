@@ -20,6 +20,7 @@ from app.api.schemas import (
     SessionListItemResponse,
     SessionPageResponse,
     SessionReviewRequest,
+    TimelineResponse,
 )
 from app.application.analytics_service import AnalyticsService, SessionNotFound
 from app.domain.analytics import EventFilters, SessionFilters
@@ -38,6 +39,16 @@ AnalystCsrf = Annotated[
 @router.get("/analytics/summary", response_model=AnalyticsSummaryResponse)
 async def summary(_: Viewer, service: Service) -> AnalyticsSummaryResponse:
     return AnalyticsSummaryResponse.from_domain(await service.summary())
+
+
+@router.get("/analytics/timeline", response_model=TimelineResponse)
+async def timeline(
+    _: Viewer,
+    service: Service,
+    hours: Annotated[int, Query(ge=1, le=720)] = 24,
+) -> TimelineResponse:
+    points = await service.timeline(hours=hours)
+    return TimelineResponse.from_domain(hours=hours, points=points)
 
 
 @router.get("/sessions", response_model=SessionPageResponse)

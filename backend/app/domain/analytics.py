@@ -32,6 +32,13 @@ class AnalyticsSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class TimelinePoint:
+    timestamp: datetime
+    events: int
+    sessions: int
+
+
+@dataclass(frozen=True, slots=True)
 class SessionFilters:
     from_at: datetime | None = None
     to_at: datetime | None = None

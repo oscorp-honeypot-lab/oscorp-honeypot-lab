@@ -9,6 +9,7 @@ $Services = @(
     "n8n",
     "pipeline-worker",
     "backend",
+    "frontend",
     "cowrie",
     "payload-server",
     "attacker-sim"
@@ -37,6 +38,11 @@ foreach ($service in $Services) {
 
     $health = (& docker inspect --format "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}" $containerId).Trim()
     Assert-LastExitCode "No se pudo consultar el healthcheck de $service."
+    for ($attempt = 0; $health -eq "starting" -and $attempt -lt 12; $attempt++) {
+        Start-Sleep -Seconds 5
+        $health = (& docker inspect --format "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}" $containerId).Trim()
+        Assert-LastExitCode "No se pudo consultar el healthcheck de $service."
+    }
     if ($health -notin @("healthy", "none")) {
         throw "El servicio $service tiene estado de salud: $health."
     }
@@ -93,6 +99,12 @@ Assert-LastExitCode "Las pruebas del backend no fueron superadas."
 $adminCount = (& docker compose exec -T postgres psql -U oscorp -d oscorp -Atc "SELECT COUNT(*) FROM app_users WHERE role='admin' AND is_active;").Trim()
 if ($adminCount -lt 1) {
     throw "No existe un administrador activo."
+}
+
+Write-Host "[validate] Verificando frontend..."
+$frontend = Invoke-WebRequest -Uri "http://localhost:5173" -TimeoutSec 15 -UseBasicParsing
+if ($frontend.StatusCode -ne 200 -or $frontend.Content -notmatch "OSCORP ThreatLab") {
+    throw "El frontend React no está disponible."
 }
 
 Write-Host "[validate] Verificando pruebas Python..."

@@ -12,6 +12,7 @@ from app.domain.analytics import (
     Page,
     SessionDetail,
     SessionListItem,
+    TimelinePoint,
 )
 from app.domain.health import HealthStatus, SystemHealth
 from app.domain.identity import Role, UserIdentity
@@ -91,6 +92,33 @@ class AnalyticsSummaryResponse(BaseModel):
     @classmethod
     def from_domain(cls, summary: AnalyticsSummary) -> "AnalyticsSummaryResponse":
         return cls.model_validate(summary)
+
+
+class TimelinePointResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    timestamp: datetime
+    events: int
+    sessions: int
+
+
+class TimelineResponse(BaseModel):
+    hours: int
+    points: tuple[TimelinePointResponse, ...]
+
+    @classmethod
+    def from_domain(
+        cls,
+        *,
+        hours: int,
+        points: tuple[TimelinePoint, ...],
+    ) -> "TimelineResponse":
+        return cls(
+            hours=hours,
+            points=tuple(
+                TimelinePointResponse.model_validate(point) for point in points
+            ),
+        )
 
 
 class SessionListItemResponse(BaseModel):

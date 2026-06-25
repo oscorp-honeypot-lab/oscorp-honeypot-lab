@@ -11,11 +11,14 @@ from app.domain.analytics import (
     SessionDetail,
     SessionFilters,
     SessionListItem,
+    TimelinePoint,
 )
 
 
 class AnalyticsRepository(Protocol):
     async def summary(self, *, rules_version: str) -> AnalyticsSummary: ...
+
+    async def timeline(self, *, hours: int) -> tuple[TimelinePoint, ...]: ...
 
     async def list_sessions(
         self,

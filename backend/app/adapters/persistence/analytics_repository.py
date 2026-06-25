@@ -17,6 +17,7 @@ from app.domain.analytics import (
     SessionDetail,
     SessionFilters,
     SessionListItem,
+    TimelinePoint,
 )
 
 
@@ -298,6 +299,64 @@ class PostgresAnalyticsRepository:
             )
             row = result.one()
         return AnalyticsSummary(**row._mapping)
+
+    async def timeline(self, *, hours: int) -> tuple[TimelinePoint, ...]:
+        async with self._session_factory() as session:
+            result = await session.execute(
+                text(
+                    """
+                    WITH bounds AS (
+                        SELECT
+                            date_trunc('hour', NOW())
+                            - make_interval(hours => :hours - 1) AS start_at,
+                            date_trunc('hour', NOW()) AS end_at
+                    ),
+                    buckets AS (
+                        SELECT generate_series(
+                            bounds.start_at,
+                            bounds.end_at,
+                            INTERVAL '1 hour'
+                        ) AS bucket
+                        FROM bounds
+                    ),
+                    event_counts AS (
+                        SELECT
+                            date_trunc('hour', timestamp_evento) AS bucket,
+                            COUNT(*)::integer AS events
+                        FROM eventos, bounds
+                        WHERE timestamp_evento >= bounds.start_at
+                          AND timestamp_evento < bounds.end_at + INTERVAL '1 hour'
+                        GROUP BY 1
+                    ),
+                    session_counts AS (
+                        SELECT
+                            date_trunc('hour', first_event_at) AS bucket,
+                            COUNT(*)::integer AS sessions
+                        FROM sessions, bounds
+                        WHERE first_event_at >= bounds.start_at
+                          AND first_event_at < bounds.end_at + INTERVAL '1 hour'
+                        GROUP BY 1
+                    )
+                    SELECT
+                        buckets.bucket,
+                        COALESCE(event_counts.events, 0) AS events,
+                        COALESCE(session_counts.sessions, 0) AS sessions
+                    FROM buckets
+                    LEFT JOIN event_counts USING (bucket)
+                    LEFT JOIN session_counts USING (bucket)
+                    ORDER BY buckets.bucket
+                    """
+                ),
+                {"hours": hours},
+            )
+            return tuple(
+                TimelinePoint(
+                    timestamp=row.bucket,
+                    events=row.events,
+                    sessions=row.sessions,
+                )
+                for row in result
+            )
 
     async def list_sessions(
         self,

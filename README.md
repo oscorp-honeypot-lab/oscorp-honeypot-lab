@@ -34,8 +34,12 @@ PostgreSQL:    localhost:5433
 Elasticsearch: http://localhost:9200
 Kibana:        http://localhost:5601
 Backend API:   http://localhost:8000/docs
+Frontend:      http://localhost:5173
 pipeline-worker: interno, sin puerto publicado
 ```
+
+La interfaz inicial permite iniciar sesión y consultar el resumen operativo,
+la evolución temporal y la distribución del Attack Risk Score.
 
 El setup genera una contraseña administrativa aleatoria en el `.env` local:
 

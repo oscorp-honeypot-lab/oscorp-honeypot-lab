@@ -259,6 +259,7 @@ def create_user(role: str) -> tuple[str, str]:
 def test_analytics_endpoints_require_authentication() -> None:
     with TestClient(app) as client:
         assert client.get("/api/v1/analytics/summary").status_code == 401
+        assert client.get("/api/v1/analytics/timeline").status_code == 401
         assert client.get("/api/v1/sessions").status_code == 401
         assert client.get("/api/v1/events").status_code == 401
         assert client.get("/api/v1/sessions/missing").status_code == 401
@@ -273,6 +274,7 @@ def test_viewer_can_read_analytics() -> None:
         )
         assert response.status_code == 200
         assert client.get("/api/v1/analytics/summary").status_code == 200
+        assert client.get("/api/v1/analytics/timeline").status_code == 200
         assert client.get("/api/v1/sessions").status_code == 200
         assert client.get("/api/v1/events").status_code == 200
 
@@ -404,6 +406,14 @@ def test_summary_and_paginated_reads(
 
         assert summary.json()["events"] == expected_events
         assert summary.json()["sessions"] == expected_sessions
+
+        timeline = client.get("/api/v1/analytics/timeline?hours=4")
+        assert timeline.status_code == 200
+        assert timeline.json()["hours"] == 4
+        assert len(timeline.json()["points"]) == 4
+        assert client.get(
+            "/api/v1/analytics/timeline?hours=721"
+        ).status_code == 422
 
         sessions = client.get("/api/v1/sessions?page=1&page_size=1")
         assert sessions.status_code == 200
