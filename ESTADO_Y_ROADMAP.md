@@ -212,7 +212,20 @@ Actualización final de la tesis:            Pendiente hasta finalizar el sistem
 
 ## Última evidencia operativa disponible
 
-Última validación: **24 de junio de 2026**.
+Última validación: **25 de junio de 2026**.
+
+La auditoría posterior al cierre de la Fase 8 confirmó:
+
+```text
+- siete servicios persistentes del perfil LAB operativos;
+- configuración Docker Compose válida;
+- PostgreSQL y Elasticsearch sincronizados en 1074 registros;
+- revisión Alembic 0001_initial_schema aplicada y en head;
+- siete scripts PowerShell sin errores de sintaxis;
+- parser y migraciones Python válidos dentro del contenedor no-root;
+- artefactos y evidencia de instalación desde clon limpio presentes;
+- repositorio main sincronizado con origin/main antes de esta replanificación.
+```
 
 Se verificaron los siete servicios persistentes del perfil LAB en ejecución:
 
@@ -333,6 +346,7 @@ Evidencia asociada:
 ```text
 docs/evidencias/validacion_operativa_2026-06-24.md
 docs/evidencias/fase8_reproducibilidad.md
+docs/evidencias/auditoria_fase8_y_replanificacion_2026-06-25.md
 ```
 
 ## Fortalezas actuales
@@ -371,7 +385,7 @@ docs/evidencias/fase8_reproducibilidad.md
 
 ---
 
-# Roadmap propuesto — Pendiente de aprobación
+# Roadmap propuesto — Pendiente de aprobación para implementar
 
 > Las siguientes fases son una propuesta de orden natural. No deben implementarse hasta recibir aprobación explícita.
 
@@ -432,28 +446,102 @@ Descartados:
 [x] Instalación y demo validadas desde clon limpio y volúmenes vacíos
 ```
 
-## Fase 9 — Pipeline n8n real y trazable
+## Criterio de descomposición desde la Fase 9
 
-Objetivo: recuperar n8n como orquestador efectivo, no solo como workflow importado.
+Cada fase futura debe:
 
-- [ ] Configurar credenciales reproducibles de PostgreSQL.
-- [ ] Ejecutar el parser NDJSON desde n8n.
-- [ ] Persistir e indexar sin depender del script manual del host.
+```text
+- producir un único resultado técnico principal;
+- contener preferentemente entre 3 y 5 tareas relacionadas;
+- poder validarse y documentarse de forma independiente;
+- evitar mezclar dominio, infraestructura, interfaz y despliegue;
+- terminar con evidencia, actualización de este archivo, commit y push.
+```
+
+Equivalencia con el roadmap anterior:
+
+```text
+Fase anterior 9  -> Fases 9 a 12
+Fase anterior 10 -> Fases 13 a 15
+Fase anterior 11 -> Fases 16 a 21
+Fase anterior 12 -> Fases 22 a 24
+Fase anterior 13 -> Fases 25 a 28
+Fase anterior 14 -> Fases 29 y 30
+Fase anterior 15 -> Fases 31 y 32
+Fase anterior 16 -> Fases 33 a 35
+Fase anterior 17 -> Fases 36 a 38
+```
+
+Skills evaluados para esta replanificación:
+
+```text
+Buscados:
+- software roadmap planning
+- task decomposition project planning
+- technical documentation / ADR
+
+No instalados:
+- los candidatos encontrados tenían adopción baja o moderada y no superaban
+  el umbral de confianza definido para incorporar dependencias nuevas.
+
+Utilizado:
+- architecture-patterns, para separar dominio, casos de uso, adaptadores
+  e infraestructura y ordenar las dependencias entre fases.
+```
+
+## Fase 9 — Contrato de integración entre n8n y el pipeline
+
+Objetivo: decidir y documentar cómo n8n ejecutará el procesamiento.
+
+- [ ] Definir si Python opera como worker principal o herramienta de recuperación.
+- [ ] Definir entradas, salidas, códigos de error y límites del procesamiento.
+- [ ] Configurar credenciales reproducibles de PostgreSQL y Elasticsearch en n8n.
+- [ ] Exportar la decisión y la configuración sin incluir secretos.
+
+## Fase 10 — Orquestación efectiva desde n8n
+
+Objetivo: ejecutar el pipeline contenerizado desde el workflow.
+
+- [ ] Disparar el procesamiento NDJSON desde n8n.
+- [ ] Persistir en PostgreSQL e indexar en Elasticsearch sin comandos manuales del host.
+- [ ] Exportar el workflow actualizado y reproducible.
+- [ ] Validar una ejecución completa iniciada desde n8n.
+
+## Fase 11 — Checkpoint e idempotencia del workflow
+
+Objetivo: procesar solamente los eventos pendientes.
+
+- [ ] Diseñar cursor, offset o checkpoint persistente.
+- [ ] Evitar reprocesamiento después de reinicios.
+- [ ] Definir recuperación cuando cambia o se rota `cowrie.json`.
+- [ ] Probar ejecuciones sucesivas sin duplicados ni pérdida de eventos.
+
+## Fase 12 — Trazabilidad y recuperación del pipeline
+
+Objetivo: hacer observable y resistente la orquestación.
+
 - [ ] Registrar cada ejecución en `pipeline_runs`.
-- [ ] Manejar errores parciales, reintentos y eventos inválidos.
-- [ ] Evitar reprocesamiento mediante cursor, offset o checkpoint.
-- [ ] Validar el workflow punta a punta con evidencia.
-- [ ] Definir si el procesador Python queda como worker del workflow o como herramienta de recuperación.
+- [ ] Manejar eventos inválidos y errores parciales.
+- [ ] Agregar reintentos controlados y estados finales claros.
+- [ ] Validar fallos y recuperación punta a punta con evidencia.
 
-## Fase 10 — Modelo analítico por sesión y Attack Risk Score
+## Fase 13 — Modelo de sesiones correlacionadas
 
-Objetivo: agregar la principal contribución analítica propia.
+Objetivo: construir la unidad analítica principal del sistema.
 
-- [ ] Crear entidad o vista de sesiones correlacionadas.
+- [ ] Diseñar la entidad, tabla o vista de sesiones.
 - [ ] Agrupar eventos por `session_id`.
-- [ ] Diseñar reglas versionadas de puntuación.
-- [ ] Registrar motivos de cada puntuación.
-- [ ] Clasificar sesiones:
+- [ ] Calcular inicio, fin, duración y resumen de actividad.
+- [ ] Crear la migración y validar sesiones completas e incompletas.
+
+## Fase 14 — Reglas versionadas de Attack Risk Score
+
+Objetivo: definir el modelo de puntuación propio sin acoplarlo a la interfaz.
+
+- [ ] Definir reglas, pesos, versión y límites del score.
+- [ ] Incluir login exitoso, usuarios privilegiados, reconocimiento, descarga y persistencia.
+- [ ] Reservar señales para reputación de hashes y origen cloud.
+- [ ] Definir niveles Bajo, Medio, Alto y Crítico.
 
 ```text
 0-20:  Bajo
@@ -462,126 +550,223 @@ Objetivo: agregar la principal contribución analítica propia.
 81+:   Crítico
 ```
 
-- [ ] Incluir señales como login exitoso, usuarios privilegiados, reconocimiento, descarga, persistencia, reputación del hash y origen cloud.
-- [ ] Crear pruebas unitarias para el score.
+## Fase 15 — Cálculo, persistencia y pruebas del Risk Score
 
-## Fase 11 — API y aplicación web propia
+Objetivo: aplicar el score a sesiones reales de forma auditable.
 
-Objetivo: construir OSCORP ThreatLab como producto propio.
+- [ ] Calcular el score por sesión.
+- [ ] Registrar los motivos y la versión de reglas utilizada.
+- [ ] Permitir recalcular sesiones al cambiar las reglas.
+- [ ] Crear pruebas unitarias y casos límite.
 
-- [ ] Crear backend API, preferentemente FastAPI.
-- [ ] Crear frontend/dashboard interactivo.
-- [ ] Mostrar resumen general, sesiones, eventos, comandos, descargas y alertas.
-- [ ] Crear detalle completo por sesión.
-- [ ] Mostrar Attack Risk Score y sus motivos.
-- [ ] Permitir marcar sesiones como revisadas.
-- [ ] Agregar filtros temporales, IP, país, usuario, evento y criticidad.
-- [ ] Permitir exportar datos y reportes.
+## Fase 16 — Base arquitectónica de la API
+
+Objetivo: crear el backend de OSCORP ThreatLab con límites claros.
+
+- [ ] Crear el proyecto FastAPI.
+- [ ] Separar dominio, casos de uso, adaptadores e infraestructura.
+- [ ] Configurar acceso a PostgreSQL, validación y manejo de errores.
+- [ ] Exponer healthcheck y documentación OpenAPI.
+
+## Fase 17 — API de consulta analítica
+
+Objetivo: exponer los datos principales para el dashboard.
+
+- [ ] Crear endpoint de resumen general.
+- [ ] Crear listado paginado de sesiones y eventos.
+- [ ] Crear detalle de sesión con comandos, descargas y score.
+- [ ] Agregar pruebas de integración de lectura.
+
+## Fase 18 — API de filtros y revisión operativa
+
+Objetivo: soportar el trabajo de análisis sobre las sesiones.
+
+- [ ] Filtrar por tiempo, IP, país, usuario, evento y criticidad.
+- [ ] Permitir marcar y desmarcar sesiones como revisadas.
+- [ ] Registrar fecha y estado de revisión.
+- [ ] Probar filtros combinados y transiciones de estado.
+
+## Fase 19 — API de exportación
+
+Objetivo: permitir extraer datos sin depender de Kibana.
+
+- [ ] Exportar sesiones y eventos filtrados a CSV.
+- [ ] Definir límites y paginación para exportaciones grandes.
+- [ ] Registrar errores y metadatos de la exportación.
+- [ ] Agregar pruebas de contenido y codificación.
+
+## Fase 20 — Dashboard web inicial
+
+Objetivo: crear la primera interfaz propia utilizable.
+
+- [ ] Crear estructura, navegación y cliente de API.
+- [ ] Mostrar resumen general y evolución temporal.
+- [ ] Mostrar listado de sesiones con filtros principales.
+- [ ] Implementar estados de carga, vacío y error.
+
+## Fase 21 — Detalle interactivo de sesión
+
+Objetivo: completar el flujo principal de análisis.
+
+- [ ] Mostrar timeline, eventos, comandos y descargas.
+- [ ] Mostrar Risk Score y motivos.
+- [ ] Mostrar alertas asociadas a la sesión.
+- [ ] Permitir marcar la sesión como revisada.
 - [ ] Mantener Kibana como herramienta complementaria.
 
-## Fase 12 — Alertas y MTTD real
+## Fase 22 — Modelo y políticas de alertas
 
-Objetivo: reemplazar la estimación teórica por medición real evento-alerta.
+Objetivo: definir qué genera una alerta y cómo se registra.
 
-- [ ] Completar la tabla `alerts` con:
+- [ ] Completar la tabla `alerts` mediante migración.
+- [ ] Incluir `event_hash`, `session_id`, timestamps, MTTD, canal, estado y error.
+- [ ] Definir criterios de alerta por evento, sesión y criticidad.
+- [ ] Registrar timestamps de evento y procesamiento.
+- [ ] Definir estados, canal y detalle de error.
 
-```text
-event_hash
-session_id
-event_timestamp
-processed_timestamp
-alert_sent_timestamp
-mttd_seconds
-alert_channel
-alert_status
-error_detail
-```
+## Fase 23 — Entrega de alertas por Telegram
 
-- [ ] Integrar Telegram.
-- [ ] Registrar alertas exitosas y fallidas.
-- [ ] Calcular:
+Objetivo: enviar alertas y registrar su resultado real.
 
-```text
-MTTD promedio
-MTTD mínimo
-MTTD máximo
-Percentil 95
-Latencia por tipo de evento
-Cantidad y porcentaje de alertas fallidas
-```
+- [ ] Integrar Telegram mediante un adaptador configurable.
+- [ ] Gestionar token y destino sin versionar secretos.
+- [ ] Registrar envíos exitosos y fallidos.
+- [ ] Agregar reintentos controlados y pruebas.
 
-- [ ] Mostrar las métricas en el dashboard propio.
+## Fase 24 — Medición real de MTTD
 
-## Fase 13 — Enriquecimiento y mapa geográfico
+Objetivo: reemplazar la estimación teórica por métricas evento-alerta.
 
-Objetivo: contextualizar IPs y archivos descargados.
+- [ ] Calcular `alert_sent_timestamp - event_timestamp`.
+- [ ] Obtener promedio, mínimo, máximo y percentil 95.
+- [ ] Calcular latencia por tipo de evento y porcentaje de fallos.
+- [ ] Exponer las métricas en API y dashboard.
 
-- [ ] Integrar ip-api con cache para evitar consultas repetidas.
+## Fase 25 — Enriquecimiento geográfico de IPs
+
+Objetivo: contextualizar el origen de las conexiones.
+
+- [ ] Integrar ip-api mediante un adaptador.
+- [ ] Agregar caché para evitar consultas repetidas.
 - [ ] Guardar país, ciudad, ISP, ASN, latitud y longitud.
-- [ ] Integrar VirusTotal para hashes.
-- [ ] Guardar resultados, fecha de consulta y errores.
-- [ ] Incorporar enriquecimiento al Risk Score.
-- [ ] Crear mapa geográfico en Kibana.
-- [ ] Crear visualización geográfica equivalente en la aplicación propia.
+- [ ] Registrar expiración, errores y límites de consulta.
 
-## Fase 14 — Reportes automáticos
+## Fase 26 — Enriquecimiento de hashes con VirusTotal
 
-Objetivo: agregar inteligencia operativa periódica.
+Objetivo: contextualizar los archivos descargados.
 
-- [ ] Generar reporte diario y semanal.
-- [ ] Incluir:
+- [ ] Integrar VirusTotal mediante un adaptador.
+- [ ] Consultar hashes sin subir payloads.
+- [ ] Guardar resultado, fecha de consulta y errores.
+- [ ] Agregar caché, límites y gestión segura de la API key.
 
-```text
-Total de eventos
-IPs y sesiones únicas
-Países detectados
-Usuarios y contraseñas más probados
-Comandos más ejecutados
-Archivos y hashes descargados
-Hashes maliciosos
-Sesiones más críticas
-MTTD real
-Alertas fallidas
-```
+## Fase 27 — Enriquecimiento aplicado al Risk Score
 
-- [ ] Exportar al menos HTML/PDF y CSV.
-- [ ] Permitir envío por Telegram y descarga desde la aplicación.
+Objetivo: incorporar contexto externo sin volver inestable el score.
 
-## Fase 15 — Dashboards Kibana versionados
+- [ ] Agregar reputación del hash y origen cloud a las reglas.
+- [ ] Definir comportamiento cuando el enriquecimiento falta o está vencido.
+- [ ] Recalcular sesiones afectadas.
+- [ ] Crear pruebas para respuestas externas parciales o fallidas.
 
-Objetivo: dejar una capa analítica complementaria importable.
+## Fase 28 — Visualización geográfica
 
-- [ ] Crear data view para `cowrie-events`.
-- [ ] Crear paneles operativos y temporales.
-- [ ] Crear visualizaciones de riesgo.
-- [ ] Crear mapa geográfico.
-- [ ] Exportar dashboards a `kibana/dashboards.ndjson`.
-- [ ] Documentar importación automática.
+Objetivo: representar actividad por ubicación.
 
-## Fase 16 — Modo REAL/VPS opcional
+- [ ] Definir el mapeo `geo_point` en Elasticsearch.
+- [ ] Crear el mapa geográfico en Kibana.
+- [ ] Crear la visualización equivalente en la aplicación propia.
+- [ ] Validar sesiones sin coordenadas o con datos incompletos.
 
-Objetivo: capturar tráfico real sin convertir la VPS en requisito del sistema.
+## Fase 29 — Motor de reportes periódicos
 
-- [ ] Diseñar despliegue seguro de Cowrie en VPS.
-- [ ] Automatizar instalación y actualización.
+Objetivo: generar conjuntos de datos diarios y semanales.
+
+- [ ] Calcular eventos, IPs, sesiones, países, credenciales y comandos principales.
+- [ ] Incluir archivos, hashes maliciosos, sesiones críticas, MTTD y alertas fallidas.
+- [ ] Programar reportes diarios y semanales.
+- [ ] Validar resultados contra consultas directas.
+
+## Fase 30 — Formatos y entrega de reportes
+
+Objetivo: distribuir reportes reproducibles.
+
+- [ ] Generar HTML o PDF y CSV.
+- [ ] Permitir descarga desde la aplicación.
+- [ ] Permitir envío por Telegram.
+- [ ] Registrar generación, entrega y errores.
+
+## Fase 31 — Dashboards operativos de Kibana
+
+Objetivo: crear una capa complementaria para operación y tiempo.
+
+- [ ] Crear el data view de `cowrie-events`.
+- [ ] Crear paneles de eventos, sesiones y evolución temporal.
+- [ ] Crear filtros y tablas operativas.
+- [ ] Validar los paneles con datos LAB.
+
+## Fase 32 — Dashboards analíticos de Kibana versionados
+
+Objetivo: completar y volver importable la capa Kibana.
+
+- [ ] Crear visualizaciones de riesgo y mapa geográfico.
+- [ ] Exportar objetos a `kibana/dashboards.ndjson`.
+- [ ] Automatizar o documentar la importación.
+- [ ] Validar exportación e importación desde una instancia limpia.
+
+## Fase 33 — Arquitectura segura del modo REAL
+
+Objetivo: diseñar la captura pública sin convertir la VPS en requisito.
+
+- [ ] Definir una arquitectura que no dependa de la PC local encendida.
+- [ ] Crear modelo de amenazas y endurecimiento de Cowrie.
+- [ ] Definir cifrado, autenticación y gestión de secretos.
+- [ ] Documentar costos, límites y responsabilidades del modo REAL.
+
+## Fase 34 — Despliegue y sincronización de la VPS
+
+Objetivo: automatizar la captura y el envío continuo.
+
+- [ ] Automatizar instalación y actualización de Cowrie.
 - [ ] Implementar sincronización o envío continuo de eventos.
-- [ ] Evitar depender de que la PC local esté encendida mediante una arquitectura definida.
-- [ ] Gestionar secretos y cifrado.
-- [ ] Separar datos LAB de datos REAL.
-- [ ] Comparar resultados simulados y reales.
+- [ ] Agregar buffer, reintentos y recuperación ante desconexiones.
+- [ ] Validar el flujo sin exponer los servicios internos del LAB.
 
-## Fase 17 — Calidad, entrega y actualización de tesis
+## Fase 35 — Separación y comparación LAB/REAL
 
-Objetivo: cerrar el proyecto como producto académico reproducible.
+Objetivo: mantener trazabilidad del origen y comparar resultados.
 
-- [ ] Agregar tests, CI y controles de calidad.
-- [ ] Validar instalación desde una máquina limpia.
-- [ ] Crear diagrama final de arquitectura.
-- [ ] Crear video demo.
-- [ ] Consolidar evidencias y métricas.
-- [ ] Revisar seguridad y privacidad de datos.
-- [ ] Actualizar el PDF de la tesis con la arquitectura y resultados definitivos.
-- [ ] Registrar diferencias entre el sistema original y OSCORP ThreatLab reestructurado.
+- [ ] Separar datos LAB y REAL en almacenamiento y consultas.
+- [ ] Etiquetar origen, sensor y ambiente.
+- [ ] Comparar ataques simulados con tráfico real.
+- [ ] Documentar diferencias, sesgos y limitaciones.
+
+## Fase 36 — Pruebas automatizadas y CI
+
+Objetivo: establecer controles continuos de calidad.
+
+- [ ] Agregar pruebas unitarias, integración y end-to-end.
+- [ ] Configurar lint, validación de migraciones y Docker Compose.
+- [ ] Crear pipeline CI sin secretos reales.
+- [ ] Definir una línea base de cobertura y fallos bloqueantes.
+
+## Fase 37 — Reproducibilidad y revisión de seguridad final
+
+Objetivo: validar una entrega instalable y defendible.
+
+- [ ] Validar instalación desde otra máquina limpia.
+- [ ] Probar backup y restauración completos.
+- [ ] Revisar dependencias, secretos, privacidad y retención de datos.
+- [ ] Crear una versión etiquetada del sistema.
+
+## Fase 38 — Documentación, defensa y actualización de tesis
+
+Objetivo: cerrar el proyecto académico después de finalizar el sistema.
+
+- [ ] Crear el diagrama final de arquitectura y actualizar las guías.
+- [ ] Crear video demo y consolidar evidencias y métricas.
+- [ ] Registrar diferencias entre el sistema original y OSCORP ThreatLab.
+- [ ] Actualizar el PDF de la tesis con arquitectura, metodología y resultados definitivos.
 
 ---
 
