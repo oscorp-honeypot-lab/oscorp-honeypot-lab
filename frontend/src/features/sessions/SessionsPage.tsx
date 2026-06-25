@@ -18,6 +18,7 @@ import {
   Search,
   ShieldAlert,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   SessionQuery,
   SessionSortField,
@@ -67,10 +68,14 @@ const columns: ColumnDef<SessionListItemResponse>[] = [
     accessorKey: "last_event_at",
     header: "Última actividad",
     cell: ({ row }) => (
-      <div className="table-primary">
+      <Link
+        to={`/sessions/${encodeURIComponent(row.original.session_key)}`}
+        className="session-row-link"
+        title="Ver detalle de sesión"
+      >
         <strong>{formatDate(row.original.last_event_at)}</strong>
         <span title={row.original.session_id}>{row.original.session_id}</span>
-      </div>
+      </Link>
     ),
   },
   {

@@ -2,6 +2,8 @@ import {
   loginApiV1AuthLoginPost,
   logoutApiV1AuthLogoutPost,
   meApiV1AuthMeGet,
+  reviewSessionApiV1SessionsSessionKeyReviewPatch,
+  sessionDetailApiV1SessionsSessionKeyGet,
   sessionsApiV1SessionsGet,
   summaryApiV1AnalyticsSummaryGet,
   timelineApiV1AnalyticsTimelineGet,
@@ -10,6 +12,8 @@ import { client } from "./generated/client.gen";
 import type {
   AnalyticsSummaryResponse,
   LoginRequestWritable,
+  SessionDetailResponse,
+  SessionListItemResponse,
   SessionPageResponse,
   TimelineResponse,
   UserResponse,
@@ -99,6 +103,29 @@ export async function getTimeline(hours: number): Promise<TimelineResponse> {
   return unwrap(
     await timelineApiV1AnalyticsTimelineGet({
       query: { hours },
+    }),
+  );
+}
+
+export async function getSessionDetail(
+  sessionKey: string,
+): Promise<SessionDetailResponse> {
+  return unwrap(
+    await sessionDetailApiV1SessionsSessionKeyGet({
+      path: { session_key: sessionKey },
+    }),
+  );
+}
+
+export async function reviewSession(
+  sessionKey: string,
+  reviewed: boolean,
+): Promise<SessionListItemResponse> {
+  return unwrap(
+    await reviewSessionApiV1SessionsSessionKeyReviewPatch({
+      path: { session_key: sessionKey },
+      body: { reviewed },
+      headers: { "X-CSRF-Token": csrfToken() },
     }),
   );
 }

@@ -182,7 +182,7 @@ Automatización
 ## Fecha de revisión
 
 ```text
-24 de junio de 2026
+25 de junio de 2026
 ```
 
 ## Estado resumido
@@ -200,7 +200,7 @@ Payloads offline:                           Implementados y validados
 Smoke test LAB:                             Implementado y superado
 Workflow n8n:                               Orquestación punta a punta implementada en Fase 10
 Kibana:                                     Servicio disponible; dashboards pendientes
-Aplicación web propia:                      Dashboard React inicial operativo; tabla pendiente
+Aplicación web propia:                      Dashboard, sesiones y detalle interactivo operativos
 Attack Risk Score:                          Implementado, persistido y validado en Fase 15
 Alertas Telegram y MTTD real:               No implementados en la reestructuración
 VirusTotal e ip-api:                        No implementados en la reestructuración
@@ -305,7 +305,12 @@ La validación operativa más reciente confirmó:
 - filtros, ordenamiento seguro, 25 filas por página y 16 páginas verificados;
 - estados de carga, vacío y error cubiertos por pruebas de componentes;
 - responsive desktop/móvil y consola sin errores verificados;
-- 5 pruebas frontend, 21 backend y 20 pipeline superadas.
+- 5 pruebas frontend, 21 backend y 20 pipeline superadas;
+- Fase 22 completada: detalle interactivo de sesión con score, comandos,
+  descargas, timeline de eventos y toggle de revisión para analyst/admin;
+- patrón container-presentational validado con 7 pruebas de componente;
+- navegación desde tabla de sesiones a /sessions/:sessionKey implementada;
+- 12 pruebas frontend, 21 backend y 20 pipeline superadas.
 ```
 
 Se verificaron los diez servicios persistentes del perfil LAB en ejecución:
@@ -448,6 +453,7 @@ docs/evidencias/fase19_filtros_revision.md
 docs/evidencias/fase20_exportacion_csv.md
 docs/evidencias/fase21_1_base_dashboard.md
 docs/evidencias/fase21_cierre_dashboard_sesiones.md
+docs/evidencias/fase22_detalle_sesion.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -1014,11 +1020,47 @@ Objetivo: crear la primera interfaz propia utilizable.
 
 Objetivo: completar el flujo principal de análisis.
 
-- [ ] Mostrar timeline, eventos, comandos y descargas.
-- [ ] Mostrar Risk Score y motivos.
-- [ ] Mostrar alertas asociadas a la sesión.
-- [ ] Permitir marcar la sesión como revisada.
-- [ ] Mantener Kibana como herramienta complementaria.
+- [x] Mostrar timeline, eventos, comandos y descargas.
+- [x] Mostrar Risk Score y motivos.
+- [x] Alertas: pendiente hasta Fase 23 (tabla de alertas aún no existe).
+- [x] Permitir marcar la sesión como revisada.
+- [x] Mantener Kibana como herramienta complementaria.
+
+### Skills de la fase
+
+```text
+Buscados:
+- React Router session detail navigation
+- TanStack Query useMutation review
+- Vitest Testing Library accessibility
+
+Utilizados existentes:
+- tanstack-query, react-router-dom, browser:control-in-app-browser
+
+Instalados:
+- ninguno; todas las dependencias ya estaban presentes
+```
+
+### Resultado
+
+```text
+[x] SessionDetailPage con patrón container-presentacional
+[x] SessionDetailView exportado e independientemente testeable
+[x] ruta /sessions/:sessionKey en React Router
+[x] Link en primera celda de SessionsPage hacia el detalle
+[x] getSessionDetail y reviewSession en client.ts
+[x] toggle de revisión con CSRF y actualización optimista de cache
+[x] botón visible solo para analyst y admin
+[x] header: IP, session_id, fechas, duración, usuario, país
+[x] score card con número, nivel y lista de reglas activadas
+[x] sección de comandos en lista monoespaciada
+[x] sección de descargas con URL y SHA-256
+[x] timeline de eventos con tipo, timestamp y detalle
+[x] estados loading, notFound y error con roles ARIA correctos
+[x] responsive desktop y móvil sin overflow
+[x] 7 pruebas nuevas → 12 pruebas frontend totales
+[x] 21 pruebas backend y 20 pruebas pipeline sin regresiones
+```
 
 ## Fase 23 — Modelo y políticas de alertas
 
