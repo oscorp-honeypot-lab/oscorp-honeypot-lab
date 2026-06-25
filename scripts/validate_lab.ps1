@@ -48,7 +48,7 @@ Assert-LastExitCode "PostgreSQL no acepta conexiones."
 
 $migration = (& docker compose exec -T postgres psql -U oscorp -d oscorp -Atc "SELECT version_num FROM alembic_version;").Trim()
 Assert-LastExitCode "No se pudo consultar la migración Alembic."
-if ($migration -ne "0005_session_risk_scores") {
+if ($migration -ne "0006_identity_security") {
     throw "Versión de migración inesperada: $migration"
 }
 
@@ -90,6 +90,10 @@ if ($openapi.info.title -ne "OSCORP ThreatLab API") {
 }
 & docker compose exec -T backend pytest -q -p no:cacheprovider
 Assert-LastExitCode "Las pruebas del backend no fueron superadas."
+$adminCount = (& docker compose exec -T postgres psql -U oscorp -d oscorp -Atc "SELECT COUNT(*) FROM app_users WHERE role='admin' AND is_active;").Trim()
+if ($adminCount -lt 1) {
+    throw "No existe un administrador activo."
+}
 
 Write-Host "[validate] Verificando pruebas Python..."
 & docker compose exec -T pipeline-worker python -m unittest discover -s /app/tests -v

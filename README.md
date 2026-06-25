@@ -37,6 +37,25 @@ Backend API:   http://localhost:8000/docs
 pipeline-worker: interno, sin puerto publicado
 ```
 
+El setup genera una contraseña administrativa aleatoria en el `.env` local:
+
+```text
+OSCORP_API_ADMIN_USERNAME
+OSCORP_API_ADMIN_PASSWORD
+```
+
+La API usa sesiones de servidor mediante cookies; no entrega tokens para
+guardar en `localStorage`.
+
+Endpoints iniciales:
+
+```text
+POST /api/v1/auth/login
+GET  /api/v1/auth/me
+POST /api/v1/auth/logout
+POST /api/v1/users
+```
+
 ## Generar eventos de ataque
 
 ```powershell

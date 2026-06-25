@@ -200,7 +200,7 @@ Payloads offline:                           Implementados y validados
 Smoke test LAB:                             Implementado y superado
 Workflow n8n:                               Orquestación punta a punta implementada en Fase 10
 Kibana:                                     Servicio disponible; dashboards pendientes
-Aplicación web propia:                      Backend base implementado; frontend pendiente
+Aplicación web propia:                      Backend con identidad y seguridad; frontend pendiente
 Attack Risk Score:                          Implementado, persistido y validado en Fase 15
 Alertas Telegram y MTTD real:               No implementados en la reestructuración
 VirusTotal e ip-api:                        No implementados en la reestructuración
@@ -219,8 +219,8 @@ La validación operativa más reciente confirmó:
 ```text
 - nueve servicios persistentes del perfil LAB operativos;
 - configuración Docker Compose válida;
-- PostgreSQL y Elasticsearch sincronizados en 2030 registros;
-- revisión Alembic 0005_session_risk_scores aplicada y en head;
+- PostgreSQL y Elasticsearch sincronizados en 2136 registros;
+- revisión Alembic 0006_identity_security aplicada y en head;
 - diecisiete scripts PowerShell sin errores de sintaxis;
 - parser y migraciones Python válidos dentro del contenedor no-root;
 - artefactos y evidencia de instalación desde clon limpio presentes;
@@ -263,6 +263,13 @@ La validación operativa más reciente confirmó:
 - smoke de Fase 16 finalizado con 2030 eventos y 338 sesiones/scores.
 - Fase 16 reproducida desde clon limpio con backend saludable, 3 pruebas,
   smoke de 106 eventos, 15 sesiones/scores e idempotencia.
+- identidad Fase 17 validada con Argon2id, sesiones opacas y tres roles;
+- CSRF, CORS, rate limit, cabeceras y auditoría verificados;
+- 11 pruebas backend y 20 pruebas pipeline superadas;
+- smoke de Fase 17 finalizado con 2136 eventos y 353 sesiones/scores.
+- Fase 17 reproducida desde clon limpio y base vacía con migración 0006,
+  11 pruebas backend, 20 pruebas pipeline, 106 eventos, 15 sesiones/scores,
+  un administrador activo e idempotencia confirmada.
 ```
 
 Se verificaron los nueve servicios persistentes del perfil LAB en ejecución:
@@ -356,16 +363,15 @@ Estado acumulado de la validación más reciente:
 
 ```text
 PostgreSQL:
-- 2030 eventos
-- 2030 event_hash únicos
-- 338 sesiones
-- 57 ejecuciones en pipeline_runs
-- último run_id: 89
-- último evento: 2026-06-25 16:13:58.166943
+- 2136 eventos
+- 2136 event_hash únicos
+- 353 sesiones
+- 60 ejecuciones en pipeline_runs
+- último run_id: 92
 - 1 evento inválido en cuarentena
 
 Elasticsearch:
-- 2030 documentos en cowrie-events
+- 2136 documentos en cowrie-events
 
 n8n:
 - versión efectiva 2.15.0
@@ -376,7 +382,7 @@ pipeline-worker:
 - contrato 1.0
 - servicio privado sin puerto publicado
 - ejecución concurrente protegida por lock
-- checkpoint en byte 535391 y línea 957
+- checkpoint en byte 594895
 
 Kibana:
 - estado general available
@@ -398,6 +404,7 @@ docs/evidencias/fase13_sesiones_correlacionadas.md
 docs/evidencias/fase14_reglas_risk_score.md
 docs/evidencias/fase15_calculo_persistencia_risk_score.md
 docs/evidencias/fase16_base_api.md
+docs/evidencias/fase17_identidad_seguridad.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -850,11 +857,24 @@ Objetivo: crear el backend de OSCORP ThreatLab con límites claros.
 
 Objetivo: proteger la aplicación antes de exponer operaciones y datos.
 
-- [ ] Crear usuarios, roles `viewer`, `analyst` y `admin`, y registro de auditoría.
-- [ ] Implementar Argon2id y sesiones de servidor con cookies HttpOnly, SameSite y Secure en producción.
-- [ ] Implementar CSRF, CORS por allowlist, rate limiting y cabeceras de seguridad.
-- [ ] Proteger endpoints por permisos y probar autenticación, autorización, cierre y expiración de sesión.
-- [ ] Mantener secretos fuera de Git y evitar tokens de acceso en `localStorage`.
+- [x] Crear usuarios, roles `viewer`, `analyst` y `admin`, y registro de auditoría.
+- [x] Implementar Argon2id y sesiones de servidor con cookies HttpOnly, SameSite y Secure en producción.
+- [x] Implementar CSRF, CORS por allowlist, rate limiting y cabeceras de seguridad.
+- [x] Proteger endpoints por permisos y probar autenticación, autorización, cierre y expiración de sesión.
+- [x] Mantener secretos fuera de Git y evitar tokens de acceso en `localStorage`.
+
+### Resultado
+
+```text
+[x] migración 0006_identity_security
+[x] administrador local generado sin versionar su contraseña
+[x] sesiones opacas persistidas y revocables
+[x] roles viewer, analyst y admin verificados
+[x] CSRF, CORS, rate limit y cabeceras de seguridad
+[x] auditoría de identidad y administración
+[x] 11 pruebas backend y smoke integral superados
+[x] clon limpio con 106 eventos, 15 sesiones/scores, un administrador y 0 duplicados
+```
 
 ## Fase 18 — API de consulta analítica
 

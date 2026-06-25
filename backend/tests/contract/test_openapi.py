@@ -8,3 +8,7 @@ def test_openapi_exposes_versioned_health_contract() -> None:
     assert document["info"]["title"] == "OSCORP ThreatLab API"
     assert "/api/v1/health/live" in document["paths"]
     assert "/api/v1/health/ready" in document["paths"]
+    assert "/api/v1/auth/login" in document["paths"]
+    assert "/api/v1/auth/logout" in document["paths"]
+    assert "/api/v1/auth/me" in document["paths"]
+    assert "/api/v1/users" in document["paths"]

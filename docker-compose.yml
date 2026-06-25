@@ -174,7 +174,7 @@ services:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    image: oscorp/pipeline:phase15
+    image: oscorp/pipeline:phase17
     pull_policy: never
     container_name: oscorp_payload_server
     restart: unless-stopped
@@ -208,7 +208,7 @@ services:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    image: oscorp/pipeline:phase15
+    image: oscorp/pipeline:phase17
     pull_policy: never
     container_name: oscorp_migrate
     command:
@@ -230,7 +230,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    image: oscorp/backend:phase16
+    image: oscorp/backend:phase17
     pull_policy: never
     container_name: oscorp_backend
     restart: unless-stopped
@@ -238,6 +238,10 @@ services:
       OSCORP_API_ENVIRONMENT: ${OSCORP_API_ENVIRONMENT:-lab}
       OSCORP_API_LOG_LEVEL: ${OSCORP_API_LOG_LEVEL:-INFO}
       OSCORP_API_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-oscorp}:${POSTGRES_PASSWORD:-oscorp123}@postgres:5432/${POSTGRES_DB:-oscorp}
+      OSCORP_API_CORS_ORIGINS: ${OSCORP_API_CORS_ORIGINS:-http://localhost:5173,http://localhost:8000}
+      OSCORP_API_COOKIE_SECURE: ${OSCORP_API_COOKIE_SECURE:-false}
+      OSCORP_API_ADMIN_USERNAME: ${OSCORP_API_ADMIN_USERNAME:-admin}
+      OSCORP_API_ADMIN_PASSWORD: ${OSCORP_API_ADMIN_PASSWORD:-}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -265,7 +269,7 @@ services:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    image: oscorp/pipeline:phase15
+    image: oscorp/pipeline:phase17
     pull_policy: never
     container_name: oscorp_pipeline_worker
     restart: unless-stopped
@@ -308,7 +312,7 @@ services:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    image: oscorp/pipeline:phase15
+    image: oscorp/pipeline:phase17
     pull_policy: never
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-oscorp}:${POSTGRES_PASSWORD:-oscorp123}@postgres:5432/${POSTGRES_DB:-oscorp}

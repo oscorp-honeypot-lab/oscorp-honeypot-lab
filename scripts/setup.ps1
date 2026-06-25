@@ -108,6 +108,24 @@ elseif ([string]::IsNullOrWhiteSpace($encryptionKey)) {
     Write-Host "[setup] Se generó una clave local estable para cifrar credenciales n8n."
 }
 
+$adminPassword = Get-DotEnvValue -Name "OSCORP_API_ADMIN_PASSWORD"
+if ([string]::IsNullOrWhiteSpace($adminPassword)) {
+    $passwordBytes = [byte[]]::new(24)
+    $random = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $random.GetBytes($passwordBytes)
+    }
+    finally {
+        $random.Dispose()
+    }
+    $adminPassword = [Convert]::ToBase64String($passwordBytes).
+        TrimEnd("=").
+        Replace("+", "-").
+        Replace("/", "_")
+    Set-DotEnvValue -Name "OSCORP_API_ADMIN_PASSWORD" -Value $adminPassword
+    Write-Host "[setup] Se generó una contraseña local para el administrador."
+}
+
 Write-Host "[setup] Validando Docker Compose..."
 Invoke-Docker compose --profile lab config --quiet
 
@@ -121,6 +139,9 @@ Invoke-Docker @upArguments
 
 Write-Host "[setup] Recalculando Attack Risk Score..."
 Invoke-Docker compose exec -T pipeline-worker python /app/recalculate_risk_scores.py
+
+Write-Host "[setup] Inicializando identidad administrativa..."
+Invoke-Docker compose exec -T backend python -m app.infrastructure.bootstrap
 
 & "$PSScriptRoot\configure_n8n_assets.ps1"
 

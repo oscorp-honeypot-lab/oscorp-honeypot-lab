@@ -5,17 +5,24 @@ from time import perf_counter
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import structlog
 
+from app.adapters.persistence.identity_repository import (
+    PostgresIdentityRepository,
+)
 from app.adapters.persistence.postgres_health_repository import (
     PostgresHealthRepository,
 )
+from app.api.middleware.security import CsrfMiddleware, SecurityHeadersMiddleware
 from app.api.v1.router import api_router
+from app.application.auth_service import AuthService
 from app.application.health_service import HealthService
 from app.infrastructure.config import get_settings
 from app.infrastructure.database import create_engine, create_session_factory
 from app.infrastructure.logging import configure_logging
+from app.infrastructure.security import PasswordManager
 
 
 settings = get_settings()
@@ -26,12 +33,22 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     engine = create_engine(settings)
-    repository = PostgresHealthRepository(create_session_factory(engine))
+    session_factory = create_session_factory(engine)
+    repository = PostgresHealthRepository(session_factory)
     app.state.health_service = HealthService(
         repository,
         service_name=settings.service_name,
         version=settings.version,
     )
+    app.state.auth_service = AuthService(
+        PostgresIdentityRepository(session_factory),
+        PasswordManager(),
+        session_absolute_minutes=settings.session_absolute_minutes,
+        session_idle_minutes=settings.session_idle_minutes,
+        login_window_minutes=settings.login_window_minutes,
+        login_max_failures=settings.login_max_failures,
+    )
+    app.state.settings = settings
     logger.info("api_started", environment=settings.environment)
     yield
     await engine.dispose()
@@ -46,6 +63,19 @@ app = FastAPI(
     redoc_url=None,
     openapi_url="/openapi.json",
     lifespan=lifespan,
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "X-CSRF-Token", "X-Request-ID"],
+)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(
+    CsrfMiddleware,
+    session_cookie_name=settings.session_cookie_name,
+    csrf_cookie_name=settings.csrf_cookie_name,
 )
 app.include_router(api_router, prefix="/api/v1")
 
