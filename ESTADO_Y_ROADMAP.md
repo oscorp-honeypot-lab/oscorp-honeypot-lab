@@ -347,6 +347,8 @@ Evidencia asociada:
 docs/evidencias/validacion_operativa_2026-06-24.md
 docs/evidencias/fase8_reproducibilidad.md
 docs/evidencias/auditoria_fase8_y_replanificacion_2026-06-25.md
+docs/evidencias/plan_aplicacion_web_2026-06-25.md
+docs/arquitectura-aplicacion-web-plan.md
 ```
 
 ## Fortalezas actuales
@@ -463,13 +465,13 @@ Equivalencia con el roadmap anterior:
 ```text
 Fase anterior 9  -> Fases 9 a 12
 Fase anterior 10 -> Fases 13 a 15
-Fase anterior 11 -> Fases 16 a 21
-Fase anterior 12 -> Fases 22 a 24
-Fase anterior 13 -> Fases 25 a 28
-Fase anterior 14 -> Fases 29 y 30
-Fase anterior 15 -> Fases 31 y 32
-Fase anterior 16 -> Fases 33 a 35
-Fase anterior 17 -> Fases 36 a 38
+Fase anterior 11 -> Fases 16 a 22
+Fase anterior 12 -> Fases 23 a 25
+Fase anterior 13 -> Fases 26 a 29
+Fase anterior 14 -> Fases 30 y 31
+Fase anterior 15 -> Fases 32 y 33
+Fase anterior 16 -> Fases 34 a 36
+Fase anterior 17 -> Fases 37 a 39
 ```
 
 Skills evaluados para esta replanificación:
@@ -487,6 +489,67 @@ No instalados:
 Utilizado:
 - architecture-patterns, para separar dominio, casos de uso, adaptadores
   e infraestructura y ordenar las dependencias entre fases.
+- fastapi-templates, para definir estructura, inyección de dependencias,
+  validación, acceso asíncrono y pruebas del backend.
+```
+
+## Plan técnico previsto para la aplicación web
+
+La aplicación propia se construirá como un monolito modular desplegado con Docker Compose:
+
+```text
+Backend:
+- Python 3.12
+- FastAPI
+- Pydantic v2
+- SQLAlchemy 2 asíncrono + psycopg 3
+- Alembic como única fuente de migraciones
+- PostgreSQL como sistema de registro
+
+Frontend:
+- React + TypeScript
+- Vite
+- React Router
+- TanStack Query
+- TanStack Table
+- Apache ECharts
+- Leaflet / React Leaflet
+- Lucide Icons
+- CSS Modules y variables de diseño
+
+Integración:
+- API REST versionada en /api/v1
+- contrato OpenAPI
+- cliente TypeScript generado desde OpenAPI
+- servicio web-gateway del mismo origen para frontend y API
+
+Calidad:
+- pytest y HTTPX para backend
+- Vitest y Testing Library para frontend
+- Playwright para recorridos end-to-end
+```
+
+Seguridad prevista:
+
+```text
+- usuarios y roles viewer, analyst y admin;
+- contraseñas con Argon2id;
+- sesiones almacenadas del lado servidor;
+- cookies HttpOnly, Secure en producción y SameSite;
+- protección CSRF para operaciones de escritura;
+- no almacenar JWT ni secretos en localStorage;
+- CORS con allowlist explícita;
+- validación estricta de entradas, límites de paginación y exportación;
+- rate limiting para login, exportaciones y endpoints costosos;
+- cabeceras de seguridad y política de contenido;
+- registro de auditoría para login, revisión, exportación y administración;
+- secretos únicamente mediante variables o archivos no versionados.
+```
+
+La estructura, decisiones y límites completos están documentados en:
+
+```text
+docs/arquitectura-aplicacion-web-plan.md
 ```
 
 ## Fase 9 — Contrato de integración entre n8n y el pipeline
@@ -563,12 +626,22 @@ Objetivo: aplicar el score a sesiones reales de forma auditable.
 
 Objetivo: crear el backend de OSCORP ThreatLab con límites claros.
 
-- [ ] Crear el proyecto FastAPI.
-- [ ] Separar dominio, casos de uso, adaptadores e infraestructura.
-- [ ] Configurar acceso a PostgreSQL, validación y manejo de errores.
-- [ ] Exponer healthcheck y documentación OpenAPI.
+- [ ] Crear el servicio FastAPI con Python 3.12, Pydantic v2 y configuración tipada.
+- [ ] Aplicar un monolito modular con `domain`, `application`, `adapters`, `infrastructure` y `api`.
+- [ ] Configurar SQLAlchemy 2 asíncrono, psycopg 3 y una única cadena de migraciones Alembic.
+- [ ] Contenerizar el backend y exponer healthcheck, logs estructurados y OpenAPI.
 
-## Fase 17 — API de consulta analítica
+## Fase 17 — Identidad y seguridad de la aplicación
+
+Objetivo: proteger la aplicación antes de exponer operaciones y datos.
+
+- [ ] Crear usuarios, roles `viewer`, `analyst` y `admin`, y registro de auditoría.
+- [ ] Implementar Argon2id y sesiones de servidor con cookies HttpOnly, SameSite y Secure en producción.
+- [ ] Implementar CSRF, CORS por allowlist, rate limiting y cabeceras de seguridad.
+- [ ] Proteger endpoints por permisos y probar autenticación, autorización, cierre y expiración de sesión.
+- [ ] Mantener secretos fuera de Git y evitar tokens de acceso en `localStorage`.
+
+## Fase 18 — API de consulta analítica
 
 Objetivo: exponer los datos principales para el dashboard.
 
@@ -577,7 +650,7 @@ Objetivo: exponer los datos principales para el dashboard.
 - [ ] Crear detalle de sesión con comandos, descargas y score.
 - [ ] Agregar pruebas de integración de lectura.
 
-## Fase 18 — API de filtros y revisión operativa
+## Fase 19 — API de filtros y revisión operativa
 
 Objetivo: soportar el trabajo de análisis sobre las sesiones.
 
@@ -586,7 +659,7 @@ Objetivo: soportar el trabajo de análisis sobre las sesiones.
 - [ ] Registrar fecha y estado de revisión.
 - [ ] Probar filtros combinados y transiciones de estado.
 
-## Fase 19 — API de exportación
+## Fase 20 — API de exportación
 
 Objetivo: permitir extraer datos sin depender de Kibana.
 
@@ -595,16 +668,17 @@ Objetivo: permitir extraer datos sin depender de Kibana.
 - [ ] Registrar errores y metadatos de la exportación.
 - [ ] Agregar pruebas de contenido y codificación.
 
-## Fase 20 — Dashboard web inicial
+## Fase 21 — Base React y dashboard operativo
 
 Objetivo: crear la primera interfaz propia utilizable.
 
-- [ ] Crear estructura, navegación y cliente de API.
-- [ ] Mostrar resumen general y evolución temporal.
-- [ ] Mostrar listado de sesiones con filtros principales.
-- [ ] Implementar estados de carga, vacío y error.
+- [ ] Crear React + TypeScript + Vite con rutas, layout operativo y control de sesión.
+- [ ] Generar el cliente TypeScript desde OpenAPI y consumirlo con TanStack Query.
+- [ ] Crear resumen, evolución temporal y distribución de riesgo con Apache ECharts.
+- [ ] Crear tabla de sesiones con TanStack Table, filtros, paginación y ordenamiento.
+- [ ] Definir componentes accesibles, diseño responsive y estados de carga, vacío y error.
 
-## Fase 21 — Detalle interactivo de sesión
+## Fase 22 — Detalle interactivo de sesión
 
 Objetivo: completar el flujo principal de análisis.
 
@@ -614,7 +688,7 @@ Objetivo: completar el flujo principal de análisis.
 - [ ] Permitir marcar la sesión como revisada.
 - [ ] Mantener Kibana como herramienta complementaria.
 
-## Fase 22 — Modelo y políticas de alertas
+## Fase 23 — Modelo y políticas de alertas
 
 Objetivo: definir qué genera una alerta y cómo se registra.
 
@@ -624,7 +698,7 @@ Objetivo: definir qué genera una alerta y cómo se registra.
 - [ ] Registrar timestamps de evento y procesamiento.
 - [ ] Definir estados, canal y detalle de error.
 
-## Fase 23 — Entrega de alertas por Telegram
+## Fase 24 — Entrega de alertas por Telegram
 
 Objetivo: enviar alertas y registrar su resultado real.
 
@@ -633,7 +707,7 @@ Objetivo: enviar alertas y registrar su resultado real.
 - [ ] Registrar envíos exitosos y fallidos.
 - [ ] Agregar reintentos controlados y pruebas.
 
-## Fase 24 — Medición real de MTTD
+## Fase 25 — Medición real de MTTD
 
 Objetivo: reemplazar la estimación teórica por métricas evento-alerta.
 
@@ -642,7 +716,7 @@ Objetivo: reemplazar la estimación teórica por métricas evento-alerta.
 - [ ] Calcular latencia por tipo de evento y porcentaje de fallos.
 - [ ] Exponer las métricas en API y dashboard.
 
-## Fase 25 — Enriquecimiento geográfico de IPs
+## Fase 26 — Enriquecimiento geográfico de IPs
 
 Objetivo: contextualizar el origen de las conexiones.
 
@@ -651,7 +725,7 @@ Objetivo: contextualizar el origen de las conexiones.
 - [ ] Guardar país, ciudad, ISP, ASN, latitud y longitud.
 - [ ] Registrar expiración, errores y límites de consulta.
 
-## Fase 26 — Enriquecimiento de hashes con VirusTotal
+## Fase 27 — Enriquecimiento de hashes con VirusTotal
 
 Objetivo: contextualizar los archivos descargados.
 
@@ -660,7 +734,7 @@ Objetivo: contextualizar los archivos descargados.
 - [ ] Guardar resultado, fecha de consulta y errores.
 - [ ] Agregar caché, límites y gestión segura de la API key.
 
-## Fase 27 — Enriquecimiento aplicado al Risk Score
+## Fase 28 — Enriquecimiento aplicado al Risk Score
 
 Objetivo: incorporar contexto externo sin volver inestable el score.
 
@@ -669,7 +743,7 @@ Objetivo: incorporar contexto externo sin volver inestable el score.
 - [ ] Recalcular sesiones afectadas.
 - [ ] Crear pruebas para respuestas externas parciales o fallidas.
 
-## Fase 28 — Visualización geográfica
+## Fase 29 — Visualización geográfica
 
 Objetivo: representar actividad por ubicación.
 
@@ -678,7 +752,7 @@ Objetivo: representar actividad por ubicación.
 - [ ] Crear la visualización equivalente en la aplicación propia.
 - [ ] Validar sesiones sin coordenadas o con datos incompletos.
 
-## Fase 29 — Motor de reportes periódicos
+## Fase 30 — Motor de reportes periódicos
 
 Objetivo: generar conjuntos de datos diarios y semanales.
 
@@ -687,7 +761,7 @@ Objetivo: generar conjuntos de datos diarios y semanales.
 - [ ] Programar reportes diarios y semanales.
 - [ ] Validar resultados contra consultas directas.
 
-## Fase 30 — Formatos y entrega de reportes
+## Fase 31 — Formatos y entrega de reportes
 
 Objetivo: distribuir reportes reproducibles.
 
@@ -696,7 +770,7 @@ Objetivo: distribuir reportes reproducibles.
 - [ ] Permitir envío por Telegram.
 - [ ] Registrar generación, entrega y errores.
 
-## Fase 31 — Dashboards operativos de Kibana
+## Fase 32 — Dashboards operativos de Kibana
 
 Objetivo: crear una capa complementaria para operación y tiempo.
 
@@ -705,7 +779,7 @@ Objetivo: crear una capa complementaria para operación y tiempo.
 - [ ] Crear filtros y tablas operativas.
 - [ ] Validar los paneles con datos LAB.
 
-## Fase 32 — Dashboards analíticos de Kibana versionados
+## Fase 33 — Dashboards analíticos de Kibana versionados
 
 Objetivo: completar y volver importable la capa Kibana.
 
@@ -714,7 +788,7 @@ Objetivo: completar y volver importable la capa Kibana.
 - [ ] Automatizar o documentar la importación.
 - [ ] Validar exportación e importación desde una instancia limpia.
 
-## Fase 33 — Arquitectura segura del modo REAL
+## Fase 34 — Arquitectura segura del modo REAL
 
 Objetivo: diseñar la captura pública sin convertir la VPS en requisito.
 
@@ -723,7 +797,7 @@ Objetivo: diseñar la captura pública sin convertir la VPS en requisito.
 - [ ] Definir cifrado, autenticación y gestión de secretos.
 - [ ] Documentar costos, límites y responsabilidades del modo REAL.
 
-## Fase 34 — Despliegue y sincronización de la VPS
+## Fase 35 — Despliegue y sincronización de la VPS
 
 Objetivo: automatizar la captura y el envío continuo.
 
@@ -732,7 +806,7 @@ Objetivo: automatizar la captura y el envío continuo.
 - [ ] Agregar buffer, reintentos y recuperación ante desconexiones.
 - [ ] Validar el flujo sin exponer los servicios internos del LAB.
 
-## Fase 35 — Separación y comparación LAB/REAL
+## Fase 36 — Separación y comparación LAB/REAL
 
 Objetivo: mantener trazabilidad del origen y comparar resultados.
 
@@ -741,7 +815,7 @@ Objetivo: mantener trazabilidad del origen y comparar resultados.
 - [ ] Comparar ataques simulados con tráfico real.
 - [ ] Documentar diferencias, sesgos y limitaciones.
 
-## Fase 36 — Pruebas automatizadas y CI
+## Fase 37 — Pruebas automatizadas y CI
 
 Objetivo: establecer controles continuos de calidad.
 
@@ -750,7 +824,7 @@ Objetivo: establecer controles continuos de calidad.
 - [ ] Crear pipeline CI sin secretos reales.
 - [ ] Definir una línea base de cobertura y fallos bloqueantes.
 
-## Fase 37 — Reproducibilidad y revisión de seguridad final
+## Fase 38 — Reproducibilidad y revisión de seguridad final
 
 Objetivo: validar una entrega instalable y defendible.
 
@@ -759,7 +833,7 @@ Objetivo: validar una entrega instalable y defendible.
 - [ ] Revisar dependencias, secretos, privacidad y retención de datos.
 - [ ] Crear una versión etiquetada del sistema.
 
-## Fase 38 — Documentación, defensa y actualización de tesis
+## Fase 39 — Documentación, defensa y actualización de tesis
 
 Objetivo: cerrar el proyecto académico después de finalizar el sistema.
 
