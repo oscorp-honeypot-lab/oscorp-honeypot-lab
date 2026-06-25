@@ -15,6 +15,7 @@ RUN pip install -r /app/requirements.txt
 COPY pipeline/alembic.ini /app/alembic.ini
 COPY pipeline/migrations /app/migrations
 COPY pipeline/contracts /app/contracts
+COPY pipeline/risk /app/risk
 COPY pipeline/tests /app/tests
 COPY pipeline/pipeline_worker.py /app/pipeline_worker.py
 COPY scripts/process_cowrie_ndjson.py /app/process_cowrie_ndjson.py

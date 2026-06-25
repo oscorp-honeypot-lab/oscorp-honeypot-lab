@@ -201,7 +201,7 @@ Smoke test LAB:                             Implementado y superado
 Workflow n8n:                               Orquestación punta a punta implementada en Fase 10
 Kibana:                                     Servicio disponible; dashboards pendientes
 Aplicación web propia:                      No implementada
-Attack Risk Score:                          No implementado
+Attack Risk Score:                          Reglas versionadas implementadas; cálculo pendiente
 Alertas Telegram y MTTD real:               No implementados en la reestructuración
 VirusTotal e ip-api:                        No implementados en la reestructuración
 Reportes automáticos:                       No implementados
@@ -247,6 +247,10 @@ La validación operativa más reciente confirmó:
   306 completas y 2 incompletas.
 - Fase 13 reproducida desde clon limpio con 108 eventos, 16 sesiones,
   transición open a complete e idempotencia confirmadas.
+- ruleset 1.0.0 de Fase 14 validado con 13 pruebas Python;
+- seis reglas activas, dos reservadas y clasificación 0-100 verificada.
+- Fase 14 reproducida desde clon limpio con smoke test, 106 eventos,
+  15 sesiones y segunda ingesta en cero.
 ```
 
 Se verificaron los ocho servicios persistentes del perfil LAB en ejecución:
@@ -377,6 +381,7 @@ docs/evidencias/fase11_checkpoint_incremental.md
 docs/evidencias/fase12_trazabilidad_recuperacion.md
 docs/evidencias/fase13_1_diseno_sesiones.md
 docs/evidencias/fase13_sesiones_correlacionadas.md
+docs/evidencias/fase14_reglas_risk_score.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -759,16 +764,27 @@ Objetivo: construir la unidad analítica principal del sistema.
 
 Objetivo: definir el modelo de puntuación propio sin acoplarlo a la interfaz.
 
-- [ ] Definir reglas, pesos, versión y límites del score.
-- [ ] Incluir login exitoso, usuarios privilegiados, reconocimiento, descarga y persistencia.
-- [ ] Reservar señales para reputación de hashes y origen cloud.
-- [ ] Definir niveles Bajo, Medio, Alto y Crítico.
+- [x] Definir reglas, pesos, versión y límites del score.
+- [x] Incluir login exitoso, usuarios privilegiados, reconocimiento, descarga y persistencia.
+- [x] Reservar señales para reputación de hashes y origen cloud.
+- [x] Definir niveles Bajo, Medio, Alto y Crítico.
 
 ```text
 0-20:  Bajo
 21-50: Medio
 51-80: Alto
 81+:   Crítico
+```
+
+### Resultado
+
+```text
+[x] ruleset 1.0.0 independiente de infraestructura
+[x] seis reglas activas con máximo de 85 puntos
+[x] dos reglas de enriquecimiento reservadas y deshabilitadas
+[x] límites 0, 20, 21, 50, 51, 80, 81 y 100 cubiertos por pruebas
+[x] 13 pruebas Python superadas dentro del contenedor no-root
+[x] clon limpio con smoke test e idempotencia superados
 ```
 
 ## Fase 15 — Cálculo, persistencia y pruebas del Risk Score
