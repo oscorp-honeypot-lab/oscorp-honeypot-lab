@@ -8,6 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.analytics import (
+    AlertItem,
     AnalyticsSummary,
     DownloadItem,
     EventFilters,
@@ -685,6 +686,68 @@ class PostgresAnalyticsRepository:
                     "filename": filename,
                 },
             )
+
+    async def list_alerts(
+        self,
+        *,
+        page: int,
+        page_size: int,
+        status: str | None = None,
+        session_key: str | None = None,
+    ) -> Page[AlertItem]:
+        offset = (page - 1) * page_size
+        clauses: list[str] = []
+        params: dict[str, Any] = {}
+        if status is not None:
+            clauses.append("status = :status")
+            params["status"] = status
+        if session_key is not None:
+            clauses.append("session_key = :session_key")
+            params["session_key"] = session_key
+        where_sql = " WHERE " + " AND ".join(clauses) if clauses else ""
+        async with self._session_factory() as session:
+            total_result = await session.execute(
+                text("SELECT COUNT(*) FROM alerts" + where_sql),
+                params,
+            )
+            total = int(total_result.scalar_one())
+            result = await session.execute(
+                text(
+                    """
+                    SELECT
+                        id, session_key, trigger, channel, status,
+                        risk_level, risk_score, event_timestamp,
+                        triggered_at, sent_at, mttd_seconds,
+                        error_code, error_detail
+                    FROM alerts
+                    """
+                    + where_sql
+                    + """
+                    ORDER BY triggered_at DESC
+                    LIMIT :limit OFFSET :offset
+                    """
+                ),
+                {**params, "limit": page_size, "offset": offset},
+            )
+            items = tuple(
+                AlertItem(
+                    id=UUID(str(row[0])),
+                    session_key=str(row[1]),
+                    trigger=str(row[2]),
+                    channel=str(row[3]),
+                    status=str(row[4]),
+                    risk_level=str(row[5]) if row[5] is not None else None,
+                    risk_score=int(row[6]) if row[6] is not None else None,
+                    event_timestamp=row[7],
+                    triggered_at=row[8],
+                    sent_at=row[9],
+                    mttd_seconds=float(row[10]) if row[10] is not None else None,
+                    error_code=str(row[11]) if row[11] is not None else None,
+                    error_detail=str(row[12]) if row[12] is not None else None,
+                )
+                for row in result
+            )
+        return Page(items=items, page=page, page_size=page_size, total=total)
 
     async def fail_export(
         self,

@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from app.domain.analytics import (
+    AlertItem,
     AnalyticsSummary,
     EventListItem,
     Page,
@@ -242,3 +243,37 @@ class SessionDetailResponse(BaseModel):
 
 class SessionReviewRequest(BaseModel):
     reviewed: bool
+
+
+class AlertItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    session_key: str
+    trigger: str
+    channel: str
+    status: str
+    risk_level: str | None
+    risk_score: int | None
+    event_timestamp: datetime | None
+    triggered_at: datetime
+    sent_at: datetime | None
+    mttd_seconds: float | None
+    error_code: str | None
+    error_detail: str | None
+
+    @classmethod
+    def from_domain(cls, alert: "AlertItem") -> "AlertItemResponse":
+        return cls.model_validate(alert)
+
+
+class AlertPageResponse(BaseModel):
+    items: tuple[AlertItemResponse, ...]
+    pagination: PaginationResponse
+
+    @classmethod
+    def from_domain(cls, page: "Page[AlertItem]") -> "AlertPageResponse":
+        return cls(
+            items=tuple(AlertItemResponse.from_domain(item) for item in page.items),
+            pagination=PaginationResponse.from_page(page),
+        )

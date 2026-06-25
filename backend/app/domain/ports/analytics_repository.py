@@ -4,6 +4,7 @@ from typing import Protocol
 from uuid import UUID
 
 from app.domain.analytics import (
+    AlertItem,
     AnalyticsSummary,
     EventFilters,
     EventListItem,
@@ -43,6 +44,15 @@ class AnalyticsRepository(Protocol):
         session_key: str,
         rules_version: str,
     ) -> SessionDetail | None: ...
+
+    async def list_alerts(
+        self,
+        *,
+        page: int,
+        page_size: int,
+        status: str | None = None,
+        session_key: str | None = None,
+    ) -> Page[AlertItem]: ...
 
     async def set_session_review(
         self,

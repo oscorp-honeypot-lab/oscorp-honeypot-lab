@@ -202,6 +202,7 @@ Workflow n8n:                               Orquestación punta a punta implemen
 Kibana:                                     Servicio disponible; dashboards pendientes
 Aplicación web propia:                      Dashboard, sesiones y detalle interactivo operativos
 Attack Risk Score:                          Implementado, persistido y validado en Fase 15
+Modelo de alertas (criterios + tabla):       Implementado en Fase 23 (pending; envío en Fase 24)
 Alertas Telegram y MTTD real:               No implementados en la reestructuración
 VirusTotal e ip-api:                        No implementados en la reestructuración
 Reportes automáticos:                       No implementados
@@ -311,6 +312,13 @@ La validación operativa más reciente confirmó:
 - patrón container-presentational validado con 7 pruebas de componente;
 - navegación desde tabla de sesiones a /sessions/:sessionKey implementada;
 - 12 pruebas frontend, 21 backend y 20 pipeline superadas.
+- Fase 23 completada: modelo de alertas con migración 0009, motor de criterios
+  puro (high_risk/successful_login/file_download), storage con deduplicación,
+  integración en pipeline post-scoring y API GET /api/v1/alerts paginada;
+- 12 alertas generadas end-to-end desde 15 sesiones existentes;
+- constraint UNIQUE(session_key, trigger) verificada (0 duplicados en re-run);
+- 9 pruebas pipeline + 5 unit + 4 integration backend superadas;
+- 30 pruebas backend y 29 pruebas pipeline superadas.
 ```
 
 Se verificaron los diez servicios persistentes del perfil LAB en ejecución:
@@ -1066,11 +1074,20 @@ Instalados:
 
 Objetivo: definir qué genera una alerta y cómo se registra.
 
-- [ ] Completar la tabla `alerts` mediante migración.
-- [ ] Incluir `event_hash`, `session_id`, timestamps, MTTD, canal, estado y error.
-- [ ] Definir criterios de alerta por evento, sesión y criticidad.
-- [ ] Registrar timestamps de evento y procesamiento.
-- [ ] Definir estados, canal y detalle de error.
+```text
+[x] Completar la tabla alerts mediante migración 0009_alerts_model.
+[x] Incluir session_key FK, event_hash FK, pipeline_run_id FK, timestamps, MTTD, canal, estado y error.
+[x] Definir criterios de alerta: high_risk (score high/critical), successful_login, file_download.
+[x] Registrar event_timestamp (del evento origen) y triggered_at (procesamiento pipeline).
+[x] Definir estados: pending, sent, failed, suppressed; canal: telegram, log, webhook.
+[x] Motor de criterios puro en pipeline/alerts/criteria.py (sin DB, testeable unitariamente).
+[x] Persistencia con deduplicación UNIQUE(session_key, trigger) en pipeline/alerts/storage.py.
+[x] Integración post-scoring en process_cowrie_ndjson.py.
+[x] API GET /api/v1/alerts con paginación y filtros (status, sessionKey), rol viewer.
+[x] 9 pruebas pipeline + 5 unit backend + 4 integration backend → 30 backend, 29 pipeline.
+[x] 12 alertas generadas end-to-end desde 15 sesiones del entorno LAB.
+Evidencia: docs/evidencias/fase23_modelo_alertas.md
+```
 
 ## Fase 24 — Entrega de alertas por Telegram
 

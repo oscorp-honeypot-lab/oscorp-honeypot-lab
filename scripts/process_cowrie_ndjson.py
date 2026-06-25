@@ -19,6 +19,7 @@ from urllib.error import HTTPError, URLError
 import psycopg
 from psycopg.types.json import Jsonb
 
+from alerts.storage import generate_session_alerts
 from risk.storage import recalculate_scores
 
 
@@ -1005,6 +1006,7 @@ def execute_pipeline(
                 inserted = insert_events(connection, events)
                 session_keys = refresh_sessions(connection, events)
                 recalculate_scores(connection, session_keys)
+                generate_session_alerts(connection, session_keys, run_id)
                 indexed = index_events(
                     elasticsearch_url,
                     elasticsearch_index,

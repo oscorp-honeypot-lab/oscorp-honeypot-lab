@@ -129,6 +129,23 @@ class SessionDetail:
 
 
 @dataclass(frozen=True, slots=True)
+class AlertItem:
+    id: UUID
+    session_key: str
+    trigger: str
+    channel: str
+    status: str
+    risk_level: str | None
+    risk_score: int | None
+    event_timestamp: datetime | None
+    triggered_at: datetime
+    sent_at: datetime | None
+    mttd_seconds: float | None
+    error_code: str | None
+    error_detail: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class ExportArtifact:
     export_id: UUID
     filename: str

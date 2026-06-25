@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.domain.analytics import (
+    AlertItem,
     AnalyticsSummary,
     EventFilters,
     EventListItem,
@@ -69,6 +70,21 @@ class AnalyticsService:
         if detail is None:
             raise SessionNotFound
         return detail
+
+    async def list_alerts(
+        self,
+        *,
+        page: int,
+        page_size: int,
+        status: str | None = None,
+        session_key: str | None = None,
+    ) -> Page[AlertItem]:
+        return await self._repository.list_alerts(
+            page=page,
+            page_size=page_size,
+            status=status,
+            session_key=session_key,
+        )
 
     async def set_session_review(
         self,
