@@ -230,7 +230,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    image: oscorp/backend:phase17
+    image: oscorp/backend:phase18
     pull_policy: never
     container_name: oscorp_backend
     restart: unless-stopped

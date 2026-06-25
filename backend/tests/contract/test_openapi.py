@@ -12,3 +12,7 @@ def test_openapi_exposes_versioned_health_contract() -> None:
     assert "/api/v1/auth/logout" in document["paths"]
     assert "/api/v1/auth/me" in document["paths"]
     assert "/api/v1/users" in document["paths"]
+    assert "/api/v1/analytics/summary" in document["paths"]
+    assert "/api/v1/sessions" in document["paths"]
+    assert "/api/v1/events" in document["paths"]
+    assert "/api/v1/sessions/{session_key}" in document["paths"]

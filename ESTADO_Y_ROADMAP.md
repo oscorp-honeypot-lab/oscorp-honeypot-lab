@@ -200,7 +200,7 @@ Payloads offline:                           Implementados y validados
 Smoke test LAB:                             Implementado y superado
 Workflow n8n:                               Orquestación punta a punta implementada en Fase 10
 Kibana:                                     Servicio disponible; dashboards pendientes
-Aplicación web propia:                      Backend con identidad y seguridad; frontend pendiente
+Aplicación web propia:                      Backend seguro con API analítica; frontend pendiente
 Attack Risk Score:                          Implementado, persistido y validado en Fase 15
 Alertas Telegram y MTTD real:               No implementados en la reestructuración
 VirusTotal e ip-api:                        No implementados en la reestructuración
@@ -270,6 +270,15 @@ La validación operativa más reciente confirmó:
 - Fase 17 reproducida desde clon limpio y base vacía con migración 0006,
   11 pruebas backend, 20 pruebas pipeline, 106 eventos, 15 sesiones/scores,
   un administrador activo e idempotencia confirmada.
+- API analítica Fase 18 protegida por rol `viewer`;
+- resumen, sesiones, eventos y detalle de sesión disponibles;
+- paginación, 404 y exclusión de contraseñas/evento crudo verificadas;
+- 15 pruebas backend y 20 pruebas pipeline superadas;
+- smoke de Fase 18 finalizado con 2241 eventos, 368 sesiones/scores
+  y segunda ingesta en cero.
+- Fase 18 reproducida desde clon limpio y base vacía con 15 pruebas backend,
+  20 pruebas pipeline, 105 eventos, 15 sesiones/scores, API analítica
+  protegida e idempotencia confirmada.
 ```
 
 Se verificaron los nueve servicios persistentes del perfil LAB en ejecución:
@@ -363,15 +372,15 @@ Estado acumulado de la validación más reciente:
 
 ```text
 PostgreSQL:
-- 2136 eventos
-- 2136 event_hash únicos
-- 353 sesiones
-- 60 ejecuciones en pipeline_runs
-- último run_id: 92
+- 2241 eventos
+- 2241 event_hash únicos
+- 368 sesiones
+- 63 ejecuciones en pipeline_runs
+- último run_id: 95
 - 1 evento inválido en cuarentena
 
 Elasticsearch:
-- 2136 documentos en cowrie-events
+- 2241 documentos en cowrie-events
 
 n8n:
 - versión efectiva 2.15.0
@@ -382,7 +391,7 @@ pipeline-worker:
 - contrato 1.0
 - servicio privado sin puerto publicado
 - ejecución concurrente protegida por lock
-- checkpoint en byte 594895
+- checkpoint en byte 654101, línea 1168
 
 Kibana:
 - estado general available
@@ -405,6 +414,7 @@ docs/evidencias/fase14_reglas_risk_score.md
 docs/evidencias/fase15_calculo_persistencia_risk_score.md
 docs/evidencias/fase16_base_api.md
 docs/evidencias/fase17_identidad_seguridad.md
+docs/evidencias/fase18_api_consulta_analitica.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -880,10 +890,22 @@ Objetivo: proteger la aplicación antes de exponer operaciones y datos.
 
 Objetivo: exponer los datos principales para el dashboard.
 
-- [ ] Crear endpoint de resumen general.
-- [ ] Crear listado paginado de sesiones y eventos.
-- [ ] Crear detalle de sesión con comandos, descargas y score.
-- [ ] Agregar pruebas de integración de lectura.
+- [x] Crear endpoint de resumen general.
+- [x] Crear listado paginado de sesiones y eventos.
+- [x] Crear detalle de sesión con comandos, descargas y score.
+- [x] Agregar pruebas de integración de lectura.
+
+### Resultado
+
+```text
+[x] resumen general contrastado contra PostgreSQL
+[x] sesiones y eventos paginados con límite máximo de 100
+[x] detalle con comandos, descargas, score y línea temporal
+[x] endpoints protegidos por rol viewer
+[x] password y raw_event excluidos de las respuestas
+[x] 15 pruebas backend, 20 pruebas pipeline y smoke integral superados
+[x] clon limpio con 105 eventos, 15 sesiones/scores y 0 duplicados
+```
 
 ## Fase 19 — API de filtros y revisión operativa
 

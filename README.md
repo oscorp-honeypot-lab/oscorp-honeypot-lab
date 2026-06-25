@@ -47,14 +47,22 @@ OSCORP_API_ADMIN_PASSWORD
 La API usa sesiones de servidor mediante cookies; no entrega tokens para
 guardar en `localStorage`.
 
-Endpoints iniciales:
+Endpoints disponibles:
 
 ```text
 POST /api/v1/auth/login
 GET  /api/v1/auth/me
 POST /api/v1/auth/logout
 POST /api/v1/users
+GET  /api/v1/analytics/summary
+GET  /api/v1/sessions
+GET  /api/v1/sessions/{session_key}
+GET  /api/v1/events
 ```
+
+Las lecturas analíticas requieren una sesión autenticada. Los listados usan
+`page` y `page_size` con un máximo de 100 elementos, y no exponen contraseñas
+ni el evento crudo almacenado.
 
 ## Generar eventos de ataque
 

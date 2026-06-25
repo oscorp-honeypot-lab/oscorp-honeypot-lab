@@ -12,12 +12,16 @@ import structlog
 from app.adapters.persistence.identity_repository import (
     PostgresIdentityRepository,
 )
+from app.adapters.persistence.analytics_repository import (
+    PostgresAnalyticsRepository,
+)
 from app.adapters.persistence.postgres_health_repository import (
     PostgresHealthRepository,
 )
 from app.api.middleware.security import CsrfMiddleware, SecurityHeadersMiddleware
 from app.api.v1.router import api_router
 from app.application.auth_service import AuthService
+from app.application.analytics_service import AnalyticsService
 from app.application.health_service import HealthService
 from app.infrastructure.config import get_settings
 from app.infrastructure.database import create_engine, create_session_factory
@@ -47,6 +51,10 @@ async def lifespan(app: FastAPI):
         session_idle_minutes=settings.session_idle_minutes,
         login_window_minutes=settings.login_window_minutes,
         login_max_failures=settings.login_max_failures,
+    )
+    app.state.analytics_service = AnalyticsService(
+        PostgresAnalyticsRepository(session_factory),
+        rules_version="1.0.0",
     )
     app.state.settings = settings
     logger.info("api_started", environment=settings.environment)

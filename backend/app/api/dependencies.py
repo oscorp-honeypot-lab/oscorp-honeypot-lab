@@ -10,6 +10,7 @@ from app.application.auth_service import (
     AuthService,
     CsrfFailed,
 )
+from app.application.analytics_service import AnalyticsService
 from app.application.health_service import HealthService
 from app.domain.identity import Role, UserIdentity
 
@@ -20,6 +21,10 @@ def get_health_service(request: Request) -> HealthService:
 
 def get_auth_service(request: Request) -> AuthService:
     return request.app.state.auth_service
+
+
+def get_analytics_service(request: Request) -> AnalyticsService:
+    return request.app.state.analytics_service
 
 
 def client_ip(request: Request) -> str:
