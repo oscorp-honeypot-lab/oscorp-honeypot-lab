@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oscorp.local/contracts/pipeline-run-request-v1.schema.json",
+  "title": "OSCORP Pipeline Run Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "request_id",
+    "triggered_by",
+    "mode"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "1.0"
+    },
+    "request_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "triggered_by": {
+      "enum": [
+        "n8n_manual",
+        "n8n_schedule",
+        "recovery"
+      ]
+    },
+    "mode": {
+      "enum": [
+        "incremental",
+        "recovery"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "default": "cowrie_ndjson"
+    }
+  }
+}

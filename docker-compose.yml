@@ -87,6 +87,7 @@ services:
       N8N_BASIC_AUTH_ACTIVE: "true"
       N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
       N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-admin123}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
       GENERIC_TIMEZONE: America/Argentina/Mendoza
       TZ: America/Argentina/Mendoza
     ports:
@@ -95,6 +96,7 @@ services:
       - n8n_data:/home/node/.n8n
       - ./cowrie/logs:/files/cowrie
       - ./n8n/workflows:/files/workflows
+      - ./n8n/credentials:/files/credentials:ro
       - ./scripts:/files/scripts:ro
     depends_on:
       postgres:

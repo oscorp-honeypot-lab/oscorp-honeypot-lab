@@ -56,7 +56,14 @@ $beforeLogLines = (Get-Content -LiteralPath "cowrie\logs\cowrie.json").Count
 Write-Host "[demo] Ejecutando ataque completo..."
 Invoke-Docker compose --profile lab run --rm attacker-sim ./run_scenario.sh full
 
-$afterAttackLogLines = (Get-Content -LiteralPath "cowrie\logs\cowrie.json").Count
+$afterAttackLogLines = $beforeLogLines
+for ($attempt = 1; $attempt -le 15; $attempt++) {
+    $afterAttackLogLines = (Get-Content -LiteralPath "cowrie\logs\cowrie.json").Count
+    if ($afterAttackLogLines -gt $beforeLogLines) {
+        break
+    }
+    Start-Sleep -Seconds 1
+}
 if ($afterAttackLogLines -le $beforeLogLines) {
     throw "Cowrie no generó eventos nuevos."
 }

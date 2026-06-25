@@ -13,13 +13,16 @@ Laboratorio OSCORP refactorizado para ejecutar un honeypot SSH con dos modos:
 ## Levantar modo LAB
 
 ```powershell
-docker compose --profile lab up -d
+.\scripts\setup.ps1
 ```
 
-También puede utilizarse el instalador reproducible:
+El script crea `.env` cuando falta, configura la clave de cifrado de n8n,
+sincroniza credenciales y workflow, y levanta los servicios.
+
+Después de la primera configuración también puede utilizarse:
 
 ```powershell
-.\scripts\setup.ps1
+docker compose --profile lab up -d
 ```
 
 Servicios principales:
@@ -70,6 +73,7 @@ Elasticsearch: indice cowrie-events
 
 ```powershell
 .\scripts\validate_lab.ps1
+.\scripts\validate_n8n_contract.ps1
 .\scripts\run_demo.ps1
 .\scripts\smoke_test.ps1
 ```
@@ -94,9 +98,11 @@ scripts/process_cowrie_ndjson.py
 scripts/run_pipeline.ps1
 scripts/setup.ps1
 scripts/validate_lab.ps1
+scripts/validate_n8n_contract.ps1
 scripts/run_demo.ps1
 scripts/smoke_test.ps1
 n8n/workflows/oscorp-workflow.json
+pipeline/contracts/
 docs/evidencias/
 ESTADO_Y_ROADMAP.md
 ```

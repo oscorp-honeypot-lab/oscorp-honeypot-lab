@@ -18,7 +18,8 @@ cowrie
   Honeypot SSH local publicado en localhost:2222.
 
 n8n
-  Orquestador SOAR-lite. Incluye workflow importable en n8n/workflows/.
+  Orquestador SOAR-lite. Usa credenciales cifradas y un workflow versionado.
+  El contrato con el worker esta definido en pipeline/contracts/.
 
 pipeline
   Procesador Python contenerizado. No requiere Python instalado en el host.

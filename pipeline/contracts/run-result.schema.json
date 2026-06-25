@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oscorp.local/contracts/pipeline-run-result-v1.schema.json",
+  "title": "OSCORP Pipeline Run Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "request_id",
+    "status",
+    "events_read",
+    "events_inserted",
+    "events_indexed",
+    "errors_count"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "1.0"
+    },
+    "request_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "run_id": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "completed_with_errors",
+        "failed"
+      ]
+    },
+    "events_read": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "events_inserted": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "events_indexed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "errors_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "error_code": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "error_detail": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

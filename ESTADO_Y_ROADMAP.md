@@ -198,7 +198,7 @@ Pipeline contenerizado:                     Implementado y validado el 24/06/202
 Migraciones Alembic:                        Implementadas y validadas en base vacía
 Payloads offline:                           Implementados y validados
 Smoke test LAB:                             Implementado y superado
-Workflow n8n:                               Importado, inactivo y no validado punta a punta
+Workflow n8n:                               Contrato y credenciales validados; orquestación pendiente
 Kibana:                                     Servicio disponible; dashboards pendientes
 Aplicación web propia:                      No implementada
 Attack Risk Score:                          No implementado
@@ -214,17 +214,20 @@ Actualización final de la tesis:            Pendiente hasta finalizar el sistem
 
 Última validación: **25 de junio de 2026**.
 
-La auditoría posterior al cierre de la Fase 8 confirmó:
+La validación posterior al cierre de la Fase 9 confirmó:
 
 ```text
 - siete servicios persistentes del perfil LAB operativos;
 - configuración Docker Compose válida;
-- PostgreSQL y Elasticsearch sincronizados en 1074 registros;
+- PostgreSQL y Elasticsearch sincronizados en 1286 registros;
 - revisión Alembic 0001_initial_schema aplicada y en head;
-- siete scripts PowerShell sin errores de sintaxis;
+- nueve scripts PowerShell sin errores de sintaxis;
 - parser y migraciones Python válidos dentro del contenedor no-root;
 - artefactos y evidencia de instalación desde clon limpio presentes;
 - repositorio main sincronizado con origin/main antes de esta replanificación.
+- credenciales n8n de PostgreSQL y Elasticsearch importadas y cifradas;
+- workflow manual de contrato ejecutado correctamente desde n8n.
+- instalación de Fase 9 validada desde clon limpio y volúmenes vacíos.
 ```
 
 Se verificaron los siete servicios persistentes del perfil LAB en ejecución:
@@ -263,7 +266,8 @@ Resultado:
 ```text
 [validate] LAB válido
 [demo] Flujo completo validado
-[demo] Eventos nuevos en PostgreSQL: 106
+[demo] Eventos nuevos en PostgreSQL: 212
+[demo] Total acumulado: 1286
 [smoke] Prueba integral superada
 ```
 
@@ -308,17 +312,19 @@ Estado acumulado de la validación más reciente:
 
 ```text
 PostgreSQL:
-- 1074 eventos
-- 1074 event_hash únicos
-- 200 sesiones
-- último evento: 2026-06-24 20:25:56.522014
+- 1286 eventos
+- 1286 event_hash únicos
+- 230 sesiones
+- 16 ejecuciones en pipeline_runs
+- último evento: 2026-06-25 01:17:00.050016
 
 Elasticsearch:
-- 1074 documentos en cowrie-events
+- 1286 documentos en cowrie-events
 
 n8n:
 - versión efectiva 2.15.0
-- workflow OSCORP importado como inactivo
+- 2 credenciales nativas importadas y cifradas
+- workflow OSCORP de contrato validado e inactivo
 
 Kibana:
 - estado general available
@@ -327,17 +333,17 @@ Kibana:
 Distribución acumulada principal:
 
 ```text
-200 cowrie.session.connect
-200 cowrie.session.closed
-145 cowrie.command.input
-114 cowrie.client.kex
-114 cowrie.client.version
-92  cowrie.login.success
-79  cowrie.session.params
-79  cowrie.log.closed
-20  cowrie.session.file_download
-15  cowrie.client.size
-13  cowrie.login.failed
+230 cowrie.session.connect
+230 cowrie.session.closed
+173 cowrie.command.input
+142 cowrie.client.kex
+142 cowrie.client.version
+114 cowrie.login.success
+97  cowrie.session.params
+97  cowrie.log.closed
+24  cowrie.session.file_download
+17  cowrie.client.size
+17  cowrie.login.failed
 3  cowrie.command.failed
 ```
 
@@ -348,6 +354,7 @@ docs/evidencias/validacion_operativa_2026-06-24.md
 docs/evidencias/fase8_reproducibilidad.md
 docs/evidencias/auditoria_fase8_y_replanificacion_2026-06-25.md
 docs/evidencias/plan_aplicacion_web_2026-06-25.md
+docs/evidencias/fase9_contrato_n8n_pipeline.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -368,7 +375,7 @@ docs/arquitectura-aplicacion-web-plan.md
 ### Críticos
 
 - El pipeline contenerizado funciona, pero n8n todavía no lo orquesta punta a punta.
-- El workflow n8n contiene una credencial placeholder y permanece inactivo.
+- El workflow de contrato permanece manual e inactivo hasta implementar la orquestación de Fase 10.
 - No existe todavía la aplicación/dashboard propio que constituye la principal diferenciación de la reestructuración.
 
 ### Altos
@@ -556,10 +563,36 @@ docs/arquitectura-aplicacion-web-plan.md
 
 Objetivo: decidir y documentar cómo n8n ejecutará el procesamiento.
 
-- [ ] Definir si Python opera como worker principal o herramienta de recuperación.
-- [ ] Definir entradas, salidas, códigos de error y límites del procesamiento.
-- [ ] Configurar credenciales reproducibles de PostgreSQL y Elasticsearch en n8n.
-- [ ] Exportar la decisión y la configuración sin incluir secretos.
+- [x] Definir si Python opera como worker principal o herramienta de recuperación.
+- [x] Definir entradas, salidas, códigos de error y límites del procesamiento.
+- [x] Configurar credenciales reproducibles de PostgreSQL y Elasticsearch en n8n.
+- [x] Exportar la decisión y la configuración sin incluir secretos.
+
+### Skills de la fase
+
+```text
+Instalados y utilizados:
+- n8n-workflow
+- n8n-credentials-and-security
+
+Utilizado existente:
+- architecture-patterns
+```
+
+### Resultado
+
+```text
+[x] ADR-0001 aceptado
+[x] n8n definido como orquestador
+[x] Python definido como worker autoritativo
+[x] contratos request/result versionados
+[x] credenciales PostgreSQL y Elasticsearch cifradas
+[x] clave n8n estable y no versionada
+[x] workflow de comprobación seguro, manual e inactivo
+[x] validación automatizada superada
+[x] smoke test sin regresiones
+[x] clon limpio con clave, credenciales, workflow y 106 eventos validado
+```
 
 ## Fase 10 — Orquestación efectiva desde n8n
 
