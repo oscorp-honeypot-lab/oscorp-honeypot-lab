@@ -314,6 +314,25 @@ def test_combined_filters(
         assert events.json()["items"][0]["command"] == "whoami"
 
 
+def test_session_sorting_and_validation() -> None:
+    with TestClient(app) as client:
+        login(client)
+        response = client.get(
+            "/api/v1/sessions"
+            "?page_size=100&sort_by=event_count&sort_order=asc"
+        )
+        assert response.status_code == 200
+        counts = [item["event_count"] for item in response.json()["items"]]
+        assert counts == sorted(counts)
+
+        assert client.get(
+            "/api/v1/sessions?sort_by=unsafe"
+        ).status_code == 422
+        assert client.get(
+            "/api/v1/sessions?sort_order=sideways"
+        ).status_code == 422
+
+
 def test_review_transitions_require_analyst(
     analytics_session: dict[str, object],
 ) -> None:

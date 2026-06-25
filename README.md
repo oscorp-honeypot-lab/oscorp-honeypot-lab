@@ -38,8 +38,9 @@ Frontend:      http://localhost:5173
 pipeline-worker: interno, sin puerto publicado
 ```
 
-La interfaz inicial permite iniciar sesión y consultar el resumen operativo,
-la evolución temporal y la distribución del Attack Risk Score.
+La interfaz permite iniciar sesión, consultar el resumen operativo, visualizar
+la evolución temporal y el Attack Risk Score, y explorar sesiones con filtros,
+ordenamiento y paginación.
 
 El setup genera una contraseña administrativa aleatoria en el `.env` local:
 

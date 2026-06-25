@@ -48,6 +48,8 @@ class SessionFilters:
     event_type: str | None = None
     risk_level: str | None = None
     reviewed: bool | None = None
+    sort_by: str = "last_event_at"
+    sort_order: str = "desc"
 
 
 @dataclass(frozen=True, slots=True)

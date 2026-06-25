@@ -14,6 +14,7 @@ TypeScript 6.0.3
 Vite 8.1.0
 React Router 7.18.0
 TanStack Query 5.101.1
+TanStack Table 8.21.3
 Apache ECharts 6.1.0
 Lucide React 1.21.0
 ```
@@ -34,9 +35,21 @@ TanStack Query administra exclusivamente estado remoto:
 auth/me
 analytics/summary
 analytics/timeline/{hours}
+sessions/{filters,sorting,pagination}
 ```
 
 No se almacenan tokens ni secretos en `localStorage`.
+
+## Tabla de sesiones
+
+La vista `/sessions` usa TanStack Table con paginación, filtros y ordenamiento
+ejecutados en el servidor. La API limita `sort_by` a columnas conocidas y
+`sort_order` a `asc` o `desc`; los identificadores no se interpolan desde
+entrada libre.
+
+La tabla incluye estados accesibles de carga, vacío, error y actualización,
+encabezados con `aria-sort`, navegación por teclado, enlace para saltar al
+contenido y desplazamiento horizontal contenido en pantallas pequeñas.
 
 ## Dashboard
 

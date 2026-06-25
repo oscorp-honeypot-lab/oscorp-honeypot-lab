@@ -774,6 +774,14 @@ export type SessionsApiV1SessionsGetData = {
          * Reviewed
          */
         reviewed?: boolean | null;
+        /**
+         * Sort By
+         */
+        sort_by?: string;
+        /**
+         * Sort Order
+         */
+        sort_order?: string;
     };
     url: '/api/v1/sessions';
 };

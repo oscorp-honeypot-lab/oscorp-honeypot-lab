@@ -2,6 +2,7 @@ import {
   loginApiV1AuthLoginPost,
   logoutApiV1AuthLogoutPost,
   meApiV1AuthMeGet,
+  sessionsApiV1SessionsGet,
   summaryApiV1AnalyticsSummaryGet,
   timelineApiV1AnalyticsTimelineGet,
 } from "./generated/sdk.gen";
@@ -9,9 +10,31 @@ import { client } from "./generated/client.gen";
 import type {
   AnalyticsSummaryResponse,
   LoginRequestWritable,
+  SessionPageResponse,
   TimelineResponse,
   UserResponse,
 } from "./generated/types.gen";
+
+export type SessionSortField =
+  | "last_event_at"
+  | "risk_score"
+  | "event_count"
+  | "command_count"
+  | "download_count"
+  | "src_ip"
+  | "country";
+
+export type SessionQuery = {
+  page: number;
+  pageSize: number;
+  srcIp?: string;
+  country?: string;
+  username?: string;
+  riskLevel?: string;
+  reviewed?: boolean;
+  sortBy: SessionSortField;
+  sortOrder: "asc" | "desc";
+};
 
 client.setConfig({
   baseUrl: "",
@@ -76,6 +99,26 @@ export async function getTimeline(hours: number): Promise<TimelineResponse> {
   return unwrap(
     await timelineApiV1AnalyticsTimelineGet({
       query: { hours },
+    }),
+  );
+}
+
+export async function getSessions(
+  query: SessionQuery,
+): Promise<SessionPageResponse> {
+  return unwrap(
+    await sessionsApiV1SessionsGet({
+      query: {
+        page: query.page,
+        page_size: query.pageSize,
+        src_ip: query.srcIp || undefined,
+        country: query.country || undefined,
+        username: query.username || undefined,
+        risk_level: query.riskLevel || undefined,
+        reviewed: query.reviewed,
+        sort_by: query.sortBy,
+        sort_order: query.sortOrder,
+      },
     }),
   );
 }

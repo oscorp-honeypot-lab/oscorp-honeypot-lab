@@ -12,6 +12,9 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">
+        Saltar al contenido
+      </a>
       <aside className="sidebar">
         <div className="sidebar-brand">
           <ShieldCheck aria-hidden="true" />
@@ -25,10 +28,10 @@ export function AppShell() {
             <Gauge aria-hidden="true" />
             Dashboard
           </NavLink>
-          <span className="nav-static">
+          <NavLink to="/sessions">
             <Activity aria-hidden="true" />
-            Operaciones
-          </span>
+            Sesiones
+          </NavLink>
         </nav>
         <div className="sidebar-user">
           <div>
@@ -46,7 +49,7 @@ export function AppShell() {
           </button>
         </div>
       </aside>
-      <main className="workspace">
+      <main className="workspace" id="main-content" tabIndex={-1}>
         <Outlet />
       </main>
     </div>

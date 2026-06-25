@@ -300,7 +300,12 @@ La validación operativa más reciente confirmó:
 - dashboard con métricas, timeline y distribución de riesgo en ECharts;
 - build y 2 pruebas frontend, 20 backend y 20 pipeline superados;
 - login y dashboard verificados en navegador desktop y móvil sin errores;
-- contenedor frontend no-root corregido y validado sin errores de permisos.
+- contenedor frontend no-root corregido y validado sin errores de permisos;
+- Fase 21 completada con tabla TanStack Table sobre 398 sesiones reales;
+- filtros, ordenamiento seguro, 25 filas por página y 16 páginas verificados;
+- estados de carga, vacío y error cubiertos por pruebas de componentes;
+- responsive desktop/móvil y consola sin errores verificados;
+- 5 pruebas frontend, 21 backend y 20 pipeline superadas.
 ```
 
 Se verificaron los diez servicios persistentes del perfil LAB en ejecución:
@@ -442,6 +447,7 @@ docs/evidencias/fase18_api_consulta_analitica.md
 docs/evidencias/fase19_filtros_revision.md
 docs/evidencias/fase20_exportacion_csv.md
 docs/evidencias/fase21_1_base_dashboard.md
+docs/evidencias/fase21_cierre_dashboard_sesiones.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -455,13 +461,13 @@ docs/arquitectura-aplicacion-web-plan.md
 - Uso de `event_hash` para ingesta idempotente.
 - Indexación comprobada previamente en Elasticsearch.
 - Documentación de arquitectura local, VPS y guía de demo.
-- Base adecuada para construir una capa analítica propia.
+- Aplicación React propia con dashboard y exploración operativa de sesiones.
 
 ## Riesgos y deuda técnica actuales
 
 ### Críticos
 
-- No existe todavía la aplicación/dashboard propio que constituye la principal diferenciación de la reestructuración.
+- Ninguno identificado en el perfil local reproducible.
 
 ### Altos
 
@@ -472,7 +478,6 @@ docs/arquitectura-aplicacion-web-plan.md
 
 ### Medios
 
-- No existen tests automáticos del parser, normalización, idempotencia o escenarios.
 - No existe CI.
 - No hay export de dashboards Kibana.
 - No existe todavía el script de sincronización VPS.
@@ -983,10 +988,10 @@ Objetivo: crear la primera interfaz propia utilizable.
 - [x] Crear React + TypeScript + Vite con rutas, layout operativo y control de sesión.
 - [x] Generar el cliente TypeScript desde OpenAPI y consumirlo con TanStack Query.
 - [x] Crear resumen, evolución temporal y distribución de riesgo con Apache ECharts.
-- [ ] Crear tabla de sesiones con TanStack Table, filtros, paginación y ordenamiento.
-- [ ] Definir componentes accesibles, diseño responsive y estados de carga, vacío y error.
+- [x] Crear tabla de sesiones con TanStack Table, filtros, paginación y ordenamiento.
+- [x] Definir componentes accesibles, diseño responsive y estados de carga, vacío y error.
 
-### Resultado parcial
+### Resultado final
 
 ```text
 [x] servicio frontend Docker no-root y saludable
@@ -996,9 +1001,13 @@ Objetivo: crear la primera interfaz propia utilizable.
 [x] endpoint horario de 1 a 720 horas
 [x] métricas, evolución temporal y distribución de riesgo
 [x] validación desktop 1280x720 y móvil 390x844
-[x] 2 pruebas frontend, 20 backend y 20 pipeline
-[ ] tabla de sesiones
-[ ] cierre completo de accesibilidad y estados
+[x] tabla de 398 sesiones con filtros combinables
+[x] paginación de servidor y selector de 25, 50 o 100 filas
+[x] ordenamiento seguro de servidor con lista blanca
+[x] estados accesibles de carga, vacío, error y actualización
+[x] enlace de salto, foco visible, aria-sort y navegación por teclado
+[x] validación desktop y móvil sin overflow global
+[x] 5 pruebas frontend, 21 backend y 20 pipeline
 ```
 
 ## Fase 22 — Detalle interactivo de sesión

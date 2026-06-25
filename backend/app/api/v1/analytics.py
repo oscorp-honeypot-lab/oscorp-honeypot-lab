@@ -68,6 +68,16 @@ async def sessions(
         Query(pattern=r"^(low|medium|high|critical)$"),
     ] = None,
     reviewed: bool | None = None,
+    sort_by: Annotated[
+        str,
+        Query(
+            pattern=(
+                r"^(last_event_at|risk_score|event_count|command_count|"
+                r"download_count|src_ip|country)$"
+            )
+        ),
+    ] = "last_event_at",
+    sort_order: Annotated[str, Query(pattern=r"^(asc|desc)$")] = "desc",
 ) -> SessionPageResponse:
     result = await service.list_sessions(
         page=page,
@@ -81,6 +91,8 @@ async def sessions(
             event_type=event_type,
             risk_level=risk_level,
             reviewed=reviewed,
+            sort_by=sort_by,
+            sort_order=sort_order,
         ),
     )
     return SessionPageResponse.from_domain(result)

@@ -88,6 +88,16 @@ SELECT
 FROM eventos e
 """
 
+SESSION_SORT_EXPRESSIONS = {
+    "last_event_at": "s.last_event_at",
+    "risk_score": "r.score",
+    "event_count": "s.event_count",
+    "command_count": "s.command_count",
+    "download_count": "s.download_count",
+    "src_ip": "s.src_ip",
+    "country": "country",
+}
+
 
 class PostgresAnalyticsRepository:
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
@@ -245,6 +255,15 @@ class PostgresAnalyticsRepository:
             params,
         )
 
+    @staticmethod
+    def _session_order_sql(filters: SessionFilters) -> str:
+        expression = SESSION_SORT_EXPRESSIONS[filters.sort_by]
+        direction = filters.sort_order.upper()
+        return (
+            f" ORDER BY {expression} {direction} NULLS LAST, "
+            "s.session_key ASC"
+        )
+
     async def summary(self, *, rules_version: str) -> AnalyticsSummary:
         async with self._session_factory() as session:
             result = await session.execute(
@@ -368,6 +387,7 @@ class PostgresAnalyticsRepository:
     ) -> Page[SessionListItem]:
         offset = (page - 1) * page_size
         where_sql, params = self._session_filter_sql(filters)
+        order_sql = self._session_order_sql(filters)
         params["rules_version"] = rules_version
         async with self._session_factory() as session:
             total_result = await session.execute(
@@ -388,8 +408,8 @@ class PostgresAnalyticsRepository:
                 text(
                     SESSION_SELECT
                     + where_sql
+                    + order_sql
                     + """
-                    ORDER BY s.last_event_at DESC, s.session_key
                     LIMIT :limit OFFSET :offset
                     """
                 ),
