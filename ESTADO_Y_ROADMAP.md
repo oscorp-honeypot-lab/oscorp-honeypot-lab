@@ -194,11 +194,11 @@ Simulación de ataques:                      Implementada y validada el 24/06/20
 Persistencia PostgreSQL:                    Implementada y validada el 24/06/2026
 Indexación Elasticsearch:                  Implementada y validada el 24/06/2026
 Ingesta idempotente por event_hash:         Implementada y validada el 24/06/2026
-Pipeline contenerizado:                     Implementado y validado el 24/06/2026
+Pipeline contenerizado:                     Implementado y expuesto como worker privado
 Migraciones Alembic:                        Implementadas y validadas en base vacía
 Payloads offline:                           Implementados y validados
 Smoke test LAB:                             Implementado y superado
-Workflow n8n:                               Contrato y credenciales validados; orquestación pendiente
+Workflow n8n:                               Orquestación punta a punta implementada en Fase 10
 Kibana:                                     Servicio disponible; dashboards pendientes
 Aplicación web propia:                      No implementada
 Attack Risk Score:                          No implementado
@@ -214,23 +214,28 @@ Actualización final de la tesis:            Pendiente hasta finalizar el sistem
 
 Última validación: **25 de junio de 2026**.
 
-La validación posterior al cierre de la Fase 9 confirmó:
+La validación operativa de la Fase 10 confirmó:
 
 ```text
-- siete servicios persistentes del perfil LAB operativos;
+- ocho servicios persistentes del perfil LAB operativos;
 - configuración Docker Compose válida;
-- PostgreSQL y Elasticsearch sincronizados en 1286 registros;
+- PostgreSQL y Elasticsearch sincronizados en 1496 registros;
 - revisión Alembic 0001_initial_schema aplicada y en head;
-- nueve scripts PowerShell sin errores de sintaxis;
+- diez scripts PowerShell sin errores de sintaxis;
 - parser y migraciones Python válidos dentro del contenedor no-root;
 - artefactos y evidencia de instalación desde clon limpio presentes;
-- repositorio main sincronizado con origin/main antes de esta replanificación.
+- repositorio main sincronizado con origin/main antes de esta fase;
 - credenciales n8n de PostgreSQL y Elasticsearch importadas y cifradas;
-- workflow manual de contrato ejecutado correctamente desde n8n.
-- instalación de Fase 9 validada desde clon limpio y volúmenes vacíos.
+- workflow manual de contrato ejecutado correctamente desde n8n;
+- instalación de Fase 10 validada desde clon limpio y volúmenes vacíos;
+- pipeline-worker privado, saludable y accesible solamente desde la red Docker;
+- workflow n8n ejecutando, validando y confirmando pipeline_runs;
+- smoke test completo utilizando n8n en lugar del pipeline manual;
+- ejecución inicial sin eventos registrada correctamente en pipeline_runs;
+- clon limpio finalizado con 105 eventos, 15 sesiones y 0 duplicados.
 ```
 
-Se verificaron los siete servicios persistentes del perfil LAB en ejecución:
+Se verificaron los ocho servicios persistentes del perfil LAB en ejecución:
 
 ```text
 oscorp_cowrie
@@ -239,6 +244,7 @@ oscorp_postgres
 oscorp_elasticsearch
 oscorp_kibana
 oscorp_n8n
+oscorp_pipeline_worker
 oscorp_payload_server
 ```
 
@@ -266,8 +272,8 @@ Resultado:
 ```text
 [validate] LAB válido
 [demo] Flujo completo validado
-[demo] Eventos nuevos en PostgreSQL: 212
-[demo] Total acumulado: 1286
+[demo] Eventos nuevos en PostgreSQL: 104
+[demo] Total acumulado: 1496
 [smoke] Prueba integral superada
 ```
 
@@ -295,56 +301,47 @@ http://payload-server:8080/bot.sh
 Resultado del pipeline e idempotencia:
 
 ```text
-Primera ejecución:
-- events_read=708
-- events_inserted=106
-- elasticsearch_indexed=708
-- status=completed
+Primera ejecución n8n:
+- run_id=57
+- events_read=422
+- events_inserted=104
+- events_indexed=422
+- errors_count=0
 
-Segunda ejecución:
-- events_read=708
+Segunda ejecución n8n:
+- run_id=58
+- events_read=422
 - events_inserted=0
-- elasticsearch_indexed=708
-- status=completed
+- events_indexed=422
+- errors_count=0
 ```
 
 Estado acumulado de la validación más reciente:
 
 ```text
 PostgreSQL:
-- 1286 eventos
-- 1286 event_hash únicos
-- 230 sesiones
-- 16 ejecuciones en pipeline_runs
-- último evento: 2026-06-25 01:17:00.050016
+- 1496 eventos
+- 1496 event_hash únicos
+- 260 sesiones
+- 26 ejecuciones en pipeline_runs
+- último run_id: 58
+- último evento: 2026-06-25 07:05:39.936686
 
 Elasticsearch:
-- 1286 documentos en cowrie-events
+- 1496 documentos en cowrie-events
 
 n8n:
 - versión efectiva 2.15.0
 - 2 credenciales nativas importadas y cifradas
-- workflow OSCORP de contrato validado e inactivo
+- workflow OSCORP ejecutado punta a punta
+
+pipeline-worker:
+- contrato 1.0
+- servicio privado sin puerto publicado
+- ejecución concurrente protegida por lock
 
 Kibana:
 - estado general available
-```
-
-Distribución acumulada principal:
-
-```text
-230 cowrie.session.connect
-230 cowrie.session.closed
-173 cowrie.command.input
-142 cowrie.client.kex
-142 cowrie.client.version
-114 cowrie.login.success
-97  cowrie.session.params
-97  cowrie.log.closed
-24  cowrie.session.file_download
-17  cowrie.client.size
-17  cowrie.login.failed
-3  cowrie.command.failed
 ```
 
 Evidencia asociada:
@@ -355,6 +352,7 @@ docs/evidencias/fase8_reproducibilidad.md
 docs/evidencias/auditoria_fase8_y_replanificacion_2026-06-25.md
 docs/evidencias/plan_aplicacion_web_2026-06-25.md
 docs/evidencias/fase9_contrato_n8n_pipeline.md
+docs/evidencias/fase10_orquestacion_n8n.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -374,13 +372,13 @@ docs/arquitectura-aplicacion-web-plan.md
 
 ### Críticos
 
-- El pipeline contenerizado funciona, pero n8n todavía no lo orquesta punta a punta.
-- El workflow de contrato permanece manual e inactivo hasta implementar la orquestación de Fase 10.
 - No existe todavía la aplicación/dashboard propio que constituye la principal diferenciación de la reestructuración.
 
 ### Altos
 
 - PostgreSQL, Elasticsearch, Kibana y n8n publican puertos con configuración de laboratorio y credenciales por defecto.
+- El workflow n8n continúa manual e inactivo; la programación corresponde a la Fase 11.
+- Cada ejecución todavía relee el NDJSON completo; falta cursor/checkpoint incremental.
 - El modo `real` todavía no aplica endurecimiento, autenticación ni separación de secretos suficiente para exposición pública.
 - La imagen `attacker-sim` es grande por las dependencias de Hydra y puede optimizarse en una fase de rendimiento.
 
@@ -598,10 +596,38 @@ Utilizado existente:
 
 Objetivo: ejecutar el pipeline contenerizado desde el workflow.
 
-- [ ] Disparar el procesamiento NDJSON desde n8n.
-- [ ] Persistir en PostgreSQL e indexar en Elasticsearch sin comandos manuales del host.
-- [ ] Exportar el workflow actualizado y reproducible.
-- [ ] Validar una ejecución completa iniciada desde n8n.
+- [x] Disparar el procesamiento NDJSON desde n8n.
+- [x] Persistir en PostgreSQL e indexar en Elasticsearch sin comandos manuales del host.
+- [x] Exportar el workflow actualizado y reproducible.
+- [x] Validar una ejecución completa iniciada desde n8n.
+
+### Skills de la fase
+
+```text
+Instalado y utilizado:
+- n8n-error-handling
+
+Reutilizados:
+- n8n-workflow
+- n8n-credentials-and-security
+- architecture-patterns
+```
+
+### Resultado
+
+```text
+[x] pipeline-worker privado y no-root
+[x] contrato HTTP 1.0 validado
+[x] workflow n8n con timeout y reintentos
+[x] consulta pipeline_runs parametrizada
+[x] demo normal migrada a n8n
+[x] recuperación manual conservada
+[x] 104 eventos nuevos insertados desde n8n
+[x] segunda ejecución con 0 duplicados
+[x] 1496 eventos sincronizados
+[x] clon limpio validado desde cero con 105 eventos
+[x] ejecución sin eventos auditable mediante pipeline_runs
+```
 
 ## Fase 11 — Checkpoint e idempotencia del workflow
 

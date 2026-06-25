@@ -1,7 +1,7 @@
 {
   "id": "oscorp-cowrie-ndjson-pipeline",
-  "name": "OSCORP - Pipeline Contract Check",
-  "description": "Fase 9: verifica conectividad de solo lectura. La orquestación del worker Python se implementa en la Fase 10.",
+  "name": "OSCORP - Cowrie Pipeline Orchestration",
+  "description": "Fase 10: n8n crea una solicitud versionada, invoca al worker privado y confirma pipeline_runs.",
   "active": false,
   "nodes": [
     {
@@ -11,21 +11,73 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -520,
+        -720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const requestId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {\n  const random = Math.floor(Math.random() * 16);\n  const value = char === 'x' ? random : (random & 0x3) | 0x8;\n  return value.toString(16);\n});\nreturn [{\n  json: {\n    contract_version: '1.0',\n    request_id: requestId,\n    triggered_by: 'n8n_manual',\n    mode: 'incremental',\n    source: 'cowrie_ndjson'\n  }\n}];"
+      },
+      "id": "60457f6f-561d-4d35-bcdf-c8bf81e1ea7f",
+      "name": "Build Run Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://pipeline-worker:8080/runs",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "535e9c20-793c-4859-b270-1b90e0829cf1",
+      "name": "Invoke Pipeline Worker",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -220,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const required = ['contract_version', 'request_id', 'status', 'events_read', 'events_inserted', 'events_indexed', 'errors_count'];\nfor (const item of $input.all()) {\n  for (const field of required) {\n    if (!(field in item.json)) throw new Error(`INVALID_WORKER_RESULT: missing ${field}`);\n  }\n  if (item.json.contract_version !== '1.0') throw new Error('INVALID_WORKER_RESULT: contract version');\n  if (item.json.status !== 'completed') throw new Error(`PIPELINE_FAILED: ${item.json.error_code || 'unknown'}`);\n}\nreturn $input.all();"
+      },
+      "id": "ad903292-35f3-4586-a11e-685330596756",
+      "name": "Validate Worker Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        40,
         0
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT current_database() AS database_name, current_user AS database_user, COUNT(*)::integer AS event_count FROM eventos;"
+        "query": "SELECT id AS run_id, status, events_read, events_inserted, events_indexed, errors_count FROM pipeline_runs WHERE id = $1;",
+        "options": {
+          "queryReplacement": "={{ $json.run_id }}"
+        }
       },
-      "id": "5ea13d77-6d78-4ef0-bde2-5e5410354d06",
-      "name": "Check PostgreSQL Credential",
+      "id": "f41b480d-aa75-420e-822d-d755f8c3c832",
+      "name": "Confirm Pipeline Run",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -240,
+        300,
         0
       ],
       "credentials": {
@@ -37,25 +89,16 @@
     },
     {
       "parameters": {
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "elasticsearchApi",
-        "url": "http://elasticsearch:9200/_cluster/health",
-        "options": {}
+        "jsCode": "const items = $input.all();\nif (items.length !== 1) throw new Error('PIPELINE_RUN_NOT_FOUND');\nconst run = items[0].json;\nif (run.status !== 'completed' || Number(run.errors_count) !== 0) {\n  throw new Error(`PIPELINE_RUN_INVALID: ${run.status}`);\n}\nreturn items;"
       },
-      "id": "2de71796-70c5-4840-83b1-4cc1b13e9c33",
-      "name": "Check Elasticsearch Credential",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "78875df8-2a67-4492-82cf-a3e7a3872438",
+      "name": "Validate Pipeline Run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        40,
+        560,
         0
-      ],
-      "credentials": {
-        "elasticsearchApi": {
-          "id": "oscorp-elasticsearch",
-          "name": "OSCORP Elasticsearch"
-        }
-      }
+      ]
     }
   ],
   "connections": {
@@ -63,18 +106,51 @@
       "main": [
         [
           {
-            "node": "Check PostgreSQL Credential",
+            "node": "Build Run Request",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check PostgreSQL Credential": {
+    "Build Run Request": {
       "main": [
         [
           {
-            "node": "Check Elasticsearch Credential",
+            "node": "Invoke Pipeline Worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoke Pipeline Worker": {
+      "main": [
+        [
+          {
+            "node": "Validate Worker Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Worker Result": {
+      "main": [
+        [
+          {
+            "node": "Confirm Pipeline Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Pipeline Run": {
+      "main": [
+        [
+          {
+            "node": "Validate Pipeline Run",
             "type": "main",
             "index": 0
           }

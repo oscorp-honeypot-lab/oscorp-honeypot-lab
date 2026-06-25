@@ -20,7 +20,7 @@ $resultSchema = Get-Content -Raw -Encoding UTF8 "pipeline\contracts\run-result.s
     ConvertFrom-Json
 
 if ($workflow.active) {
-    throw "El workflow de contrato debe permanecer inactivo en Fase 9."
+    throw "El workflow debe permanecer inactivo para ejecución manual controlada."
 }
 if ($requestSchema.properties.contract_version.const -ne "1.0") {
     throw "Versión inesperada del contrato de solicitud."
@@ -35,6 +35,7 @@ $forbiddenPatterns = @(
     "readBinaryFile",
     "Parse NDJSON",
     "INSERT INTO eventos",
+    "/_cluster/health",
     "oscorp123",
     "admin123"
 )
@@ -79,26 +80,23 @@ finally {
     & docker compose exec -T n8n rm -f /tmp/oscorp-credentials-validation.json 2>$null
 }
 
-Write-Host "[n8n-contract] Ejecutando comprobación de solo lectura..."
-Invoke-Docker compose stop n8n
-try {
-    $executionOutput = & docker compose --profile lab run --rm --no-deps n8n execute --id=oscorp-cowrie-ndjson-pipeline --rawOutput
-    if ($LASTEXITCODE -ne 0) {
-        throw "El workflow finalizó con código $LASTEXITCODE."
-    }
-    $executionText = $executionOutput -join "`n"
-    if ($executionText -notmatch '"status":\s*"success"') {
-        throw "El workflow no informó estado success."
-    }
-    if ($executionText -notmatch '"event_count":\s*\d+') {
-        throw "El workflow no devolvió el conteo PostgreSQL."
-    }
-    if ($executionText -notmatch '"cluster_name":\s*"docker-cluster"') {
-        throw "El workflow no devolvió la salud de Elasticsearch."
-    }
+Write-Host "[n8n-contract] Verificando acceso interno al worker..."
+$workerHealth = & docker compose exec -T n8n wget -qO- http://pipeline-worker:8080/health
+if ($LASTEXITCODE -ne 0) {
+    throw "n8n no puede acceder al pipeline-worker."
 }
-finally {
-    Invoke-Docker compose --profile lab up -d --wait n8n
+$worker = ($workerHealth -join "`n") | ConvertFrom-Json
+if ($worker.status -ne "ok" -or $worker.contract_version -ne "1.0") {
+    throw "Respuesta de salud inválida del pipeline-worker."
 }
 
-Write-Host "[n8n-contract] Contrato y credenciales validados."
+$executionOutput = & "$PSScriptRoot\run_n8n_pipeline.ps1"
+$executionText = $executionOutput -join "`n"
+if ($executionText -notmatch 'run_id=\d+') {
+    throw "El workflow no confirmó pipeline_runs."
+}
+if ($executionText -notmatch 'events_read=\d+') {
+    throw "El workflow no devolvió métricas del pipeline."
+}
+
+Write-Host "[n8n-contract] Contrato, worker y orquestación validados."

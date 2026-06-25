@@ -32,7 +32,7 @@
       ]
     },
     "source": {
-      "type": "string",
+      "const": "cowrie_ndjson",
       "default": "cowrie_ndjson"
     }
   }

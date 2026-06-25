@@ -2,7 +2,8 @@
 
 ```text
 attacker-sim -> cowrie -> cowrie/logs/cowrie.json
-                         -> pipeline container
+                         -> n8n
+                         -> pipeline-worker
                          -> PostgreSQL:eventos
                          -> Elasticsearch:cowrie-events
                          -> Kibana
@@ -21,8 +22,12 @@ n8n
   Orquestador SOAR-lite. Usa credenciales cifradas y un workflow versionado.
   El contrato con el worker esta definido en pipeline/contracts/.
 
+pipeline-worker
+  Servicio HTTP privado, no publicado al host. Recibe solicitudes versionadas
+  desde n8n y reutiliza el mismo caso de uso del procesador manual.
+
 pipeline
-  Procesador Python contenerizado. No requiere Python instalado en el host.
+  Entrada de recuperación manual al procesador Python contenerizado.
 
 migrate
   Ejecuta migraciones Alembic antes de iniciar consumidores de PostgreSQL.

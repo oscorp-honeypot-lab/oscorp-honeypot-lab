@@ -33,6 +33,7 @@ n8n:           http://localhost:5678
 PostgreSQL:    localhost:5433
 Elasticsearch: http://localhost:9200
 Kibana:        http://localhost:5601
+pipeline-worker: interno, sin puerto publicado
 ```
 
 ## Generar eventos de ataque
@@ -54,6 +55,13 @@ docker compose --profile lab run --rm attacker-sim ./run_scenario.sh full
 
 ```powershell
 .\scripts\run_pipeline.ps1
+```
+
+Este comando queda como mecanismo de recuperación manual. La ejecución normal
+del flujo completo se realiza desde n8n:
+
+```powershell
+.\scripts\run_n8n_pipeline.ps1
 ```
 
 El pipeline lee:
@@ -78,7 +86,8 @@ Elasticsearch: indice cowrie-events
 .\scripts\smoke_test.ps1
 ```
 
-El smoke test comprueba servicios, ataque completo, descarga offline, persistencia, indexación e idempotencia.
+El smoke test comprueba servicios, ataque completo, descarga offline,
+orquestación desde n8n, persistencia, indexación e idempotencia.
 
 ## Administración
 
@@ -100,6 +109,7 @@ scripts/setup.ps1
 scripts/validate_lab.ps1
 scripts/validate_n8n_contract.ps1
 scripts/run_demo.ps1
+scripts/run_n8n_pipeline.ps1
 scripts/smoke_test.ps1
 n8n/workflows/oscorp-workflow.json
 pipeline/contracts/

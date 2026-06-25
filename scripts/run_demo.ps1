@@ -88,8 +88,8 @@ if (-not ($newEvents.url -match "^http://payload-server:8080/")) {
     throw "La campaña no utilizó el payload-server interno."
 }
 
-Write-Host "[demo] Ejecutando pipeline contenerizado..."
-& "$PSScriptRoot\run_pipeline.ps1"
+Write-Host "[demo] Ejecutando pipeline orquestado por n8n..."
+& "$PSScriptRoot\run_n8n_pipeline.ps1"
 
 $afterPostgres = Get-PostgresEventCount
 $afterElasticsearch = Get-ElasticsearchEventCount
@@ -104,7 +104,7 @@ if ($afterPostgres -ne $afterElasticsearch) {
 }
 
 Write-Host "[demo] Verificando idempotencia..."
-& "$PSScriptRoot\run_pipeline.ps1"
+& "$PSScriptRoot\run_n8n_pipeline.ps1"
 $idempotentPostgres = Get-PostgresEventCount
 $idempotentElasticsearch = Get-ElasticsearchEventCount
 if ($idempotentPostgres -ne $afterPostgres) {

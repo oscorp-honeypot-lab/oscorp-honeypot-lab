@@ -7,6 +7,7 @@ $Services = @(
     "elasticsearch",
     "kibana",
     "n8n",
+    "pipeline-worker",
     "cowrie",
     "payload-server",
     "attacker-sim"
@@ -66,6 +67,14 @@ Write-Host "[validate] Verificando n8n..."
 $n8n = Invoke-RestMethod -Uri "http://localhost:5678/healthz" -TimeoutSec 15
 if ($n8n.status -ne "ok") {
     throw "n8n no está saludable."
+}
+
+Write-Host "[validate] Verificando pipeline-worker..."
+$workerHealth = & docker compose exec -T n8n wget -qO- http://pipeline-worker:8080/health
+Assert-LastExitCode "pipeline-worker no es accesible desde n8n."
+$worker = ($workerHealth -join "`n") | ConvertFrom-Json
+if ($worker.status -ne "ok" -or $worker.contract_version -ne "1.0") {
+    throw "pipeline-worker no está saludable."
 }
 
 Write-Host "[validate] Verificando payload interno..."

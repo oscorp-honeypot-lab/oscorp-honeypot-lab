@@ -103,6 +103,8 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
+      pipeline-worker:
+        condition: service_healthy
       migrate:
         condition: service_completed_successfully
     healthcheck:
@@ -172,7 +174,7 @@ services:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    image: oscorp/pipeline:phase8
+    image: oscorp/pipeline:phase10
     pull_policy: never
     container_name: oscorp_payload_server
     restart: unless-stopped
@@ -206,7 +208,7 @@ services:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    image: oscorp/pipeline:phase8
+    image: oscorp/pipeline:phase10
     pull_policy: never
     container_name: oscorp_migrate
     command:
@@ -224,11 +226,54 @@ services:
       - lab
       - real
 
+  pipeline-worker:
+    build:
+      context: .
+      dockerfile: pipeline/Dockerfile
+    image: oscorp/pipeline:phase10
+    pull_policy: never
+    container_name: oscorp_pipeline_worker
+    restart: unless-stopped
+    command:
+      - python
+      - /app/pipeline_worker.py
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-oscorp}:${POSTGRES_PASSWORD:-oscorp123}@postgres:5432/${POSTGRES_DB:-oscorp}
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_INDEX: ${ELASTICSEARCH_INDEX:-cowrie-events}
+      COWRIE_LOG_PATH: /files/cowrie/cowrie.json
+      PIPELINE_WORKER_HOST: 0.0.0.0
+      PIPELINE_WORKER_PORT: 8080
+    volumes:
+      - ./cowrie/logs:/files/cowrie:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=3)
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    networks:
+      - oscorp_net
+    profiles:
+      - lab
+      - real
+
   pipeline:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    image: oscorp/pipeline:phase8
+    image: oscorp/pipeline:phase10
     pull_policy: never
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-oscorp}:${POSTGRES_PASSWORD:-oscorp123}@postgres:5432/${POSTGRES_DB:-oscorp}

@@ -80,7 +80,8 @@ Salidas principales:
 10 error interno no clasificado
 ```
 
-La adaptación del worker para emitir el resultado JSON y la invocación efectiva desde n8n pertenecen a la Fase 10.
+La Fase 10 implementó este contrato mediante un servicio HTTP privado
+`pipeline-worker`, sin montar el socket Docker y sin publicar su puerto al host.
 
 ## Credenciales
 
@@ -105,8 +106,9 @@ Los secretos se obtienen desde `.env`, se importan temporalmente con la CLI y se
 - El workflow no parseará NDJSON ni construirá SQL.
 - n8n no recibirá contraseñas de base de datos dentro del workflow JSON.
 - El worker no aceptará rutas de archivos arbitrarias desde el workflow.
-- El workflow de Fase 9 es manual, inactivo y solamente verifica conectividad de lectura.
-- La programación, reintentos y ejecución productiva quedan para las Fases 10 a 12.
+- El workflow permanece inactivo para ejecución manual controlada durante las pruebas.
+- La programación y el checkpoint incremental quedan para la Fase 11.
+- La recuperación avanzada y el tratamiento de errores parciales quedan para la Fase 12.
 
 ## Consecuencias
 
