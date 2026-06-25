@@ -119,6 +119,9 @@ if (-not $NoBuild) {
 Write-Host "[setup] Levantando el perfil LAB..."
 Invoke-Docker @upArguments
 
+Write-Host "[setup] Recalculando Attack Risk Score..."
+Invoke-Docker compose exec -T pipeline-worker python /app/recalculate_risk_scores.py
+
 & "$PSScriptRoot\configure_n8n_assets.ps1"
 
 Write-Host "[setup] Entorno LAB listo."

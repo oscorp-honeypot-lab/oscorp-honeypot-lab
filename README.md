@@ -88,6 +88,7 @@ alterar ese checkpoint.
 .\scripts\validate_n8n_contract.ps1
 .\scripts\run_demo.ps1
 .\scripts\smoke_test.ps1
+.\scripts\recalculate_risk_scores.ps1
 ```
 
 El smoke test comprueba servicios, ataque completo, descarga offline,
@@ -120,6 +121,8 @@ scripts/validate_sessions.ps1
 scripts/run_demo.ps1
 scripts/run_n8n_pipeline.ps1
 scripts/smoke_test.ps1
+scripts/recalculate_risk_scores.ps1
+scripts/validate_risk_scores.ps1
 n8n/workflows/oscorp-workflow.json
 pipeline/contracts/
 docs/evidencias/

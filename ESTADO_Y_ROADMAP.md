@@ -201,7 +201,7 @@ Smoke test LAB:                             Implementado y superado
 Workflow n8n:                               Orquestación punta a punta implementada en Fase 10
 Kibana:                                     Servicio disponible; dashboards pendientes
 Aplicación web propia:                      No implementada
-Attack Risk Score:                          Reglas versionadas implementadas; cálculo pendiente
+Attack Risk Score:                          Implementado, persistido y validado en Fase 15
 Alertas Telegram y MTTD real:               No implementados en la reestructuración
 VirusTotal e ip-api:                        No implementados en la reestructuración
 Reportes automáticos:                       No implementados
@@ -219,9 +219,9 @@ La validación operativa más reciente confirmó:
 ```text
 - ocho servicios persistentes del perfil LAB operativos;
 - configuración Docker Compose válida;
-- PostgreSQL y Elasticsearch sincronizados en 1818 registros;
-- revisión Alembic 0004_correlated_sessions aplicada y en head;
-- quince scripts PowerShell sin errores de sintaxis;
+- PostgreSQL y Elasticsearch sincronizados en 1924 registros;
+- revisión Alembic 0005_session_risk_scores aplicada y en head;
+- diecisiete scripts PowerShell sin errores de sintaxis;
 - parser y migraciones Python válidos dentro del contenedor no-root;
 - artefactos y evidencia de instalación desde clon limpio presentes;
 - repositorio main sincronizado con origin/main antes de esta fase;
@@ -251,6 +251,12 @@ La validación operativa más reciente confirmó:
 - seis reglas activas, dos reservadas y clasificación 0-100 verificada.
 - Fase 14 reproducida desde clon limpio con smoke test, 106 eventos,
   15 sesiones y segunda ingesta en cero.
+- Fase 15 calculó y persistió 323 scores con versión 1.0.0 y 0 inválidos;
+- distribución actual: 177 low, 145 medium, 1 high y 0 critical;
+- 20 pruebas Python superadas y recálculo completo verificado.
+- smoke incremental de Fase 15: 106 eventos, 15 sesiones nuevas y 0 duplicados.
+- Fase 15 reproducida desde clon limpio y base vacía con 20 pruebas,
+  105 eventos, 15 scores, recálculo e idempotencia.
 ```
 
 Se verificaron los ocho servicios persistentes del perfil LAB en ejecución:
@@ -342,16 +348,16 @@ Estado acumulado de la validación más reciente:
 
 ```text
 PostgreSQL:
-- 1818 eventos
-- 1818 event_hash únicos
-- 308 sesiones
-- 51 ejecuciones en pipeline_runs
-- último run_id: 83
-- último evento: 2026-06-25 12:08:36.58022
+- 1924 eventos
+- 1924 event_hash únicos
+- 323 sesiones
+- 54 ejecuciones en pipeline_runs
+- último run_id: 86
+- último evento: 2026-06-25 12:34:14.35441
 - 1 evento inválido en cuarentena
 
 Elasticsearch:
-- 1818 documentos en cowrie-events
+- 1924 documentos en cowrie-events
 
 n8n:
 - versión efectiva 2.15.0
@@ -362,7 +368,7 @@ pipeline-worker:
 - contrato 1.0
 - servicio privado sin puerto publicado
 - ejecución concurrente protegida por lock
-- checkpoint en byte 416383
+- checkpoint en byte 475887 y línea 851
 
 Kibana:
 - estado general available
@@ -382,6 +388,7 @@ docs/evidencias/fase12_trazabilidad_recuperacion.md
 docs/evidencias/fase13_1_diseno_sesiones.md
 docs/evidencias/fase13_sesiones_correlacionadas.md
 docs/evidencias/fase14_reglas_risk_score.md
+docs/evidencias/fase15_calculo_persistencia_risk_score.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -791,10 +798,23 @@ Objetivo: definir el modelo de puntuación propio sin acoplarlo a la interfaz.
 
 Objetivo: aplicar el score a sesiones reales de forma auditable.
 
-- [ ] Calcular el score por sesión.
-- [ ] Registrar los motivos y la versión de reglas utilizada.
-- [ ] Permitir recalcular sesiones al cambiar las reglas.
-- [ ] Crear pruebas unitarias y casos límite.
+- [x] Calcular el score por sesión.
+- [x] Registrar los motivos y la versión de reglas utilizada.
+- [x] Permitir recalcular sesiones al cambiar las reglas.
+- [x] Crear pruebas unitarias y casos límite.
+
+### Resultado
+
+```text
+[x] migración 0005_session_risk_scores aplicada
+[x] 323 sesiones con score versionado y razones JSONB
+[x] cálculo incremental integrado al pipeline
+[x] recálculo completo mediante script reproducible
+[x] 20 pruebas Python superadas
+[x] distribución validada: 177 low, 145 medium, 1 high, 0 critical
+[x] smoke incremental: 106 eventos, 15 sesiones y segunda ingesta en cero
+[x] clon limpio: base vacía válida, 105 eventos y 15 scores recalculables
+```
 
 ## Fase 16 — Base arquitectónica de la API
 

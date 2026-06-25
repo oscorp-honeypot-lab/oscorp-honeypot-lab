@@ -19,6 +19,8 @@ from urllib.error import HTTPError, URLError
 import psycopg
 from psycopg.types.json import Jsonb
 
+from risk.storage import recalculate_scores
+
 
 INSERT_EVENT_SQL = """
 INSERT INTO eventos (
@@ -565,7 +567,7 @@ def insert_events(
 def refresh_sessions(
     connection: psycopg.Connection[Any],
     events: list[dict[str, Any]],
-) -> int:
+) -> tuple[str, ...]:
     session_pairs = sorted(
         {
             (
@@ -577,13 +579,13 @@ def refresh_sessions(
         }
     )
     if not session_pairs:
-        return 0
+        return ()
     sensors = [pair[0] for pair in session_pairs]
     session_ids = [pair[1] for pair in session_pairs]
     with connection.cursor() as cursor:
         cursor.execute(SESSION_UPSERT_SQL, (sensors, session_ids))
     connection.commit()
-    return len(session_pairs)
+    return tuple(f"{sensor}:{session_id}" for sensor, session_id in session_pairs)
 
 
 def create_pipeline_run(
@@ -1001,7 +1003,8 @@ def execute_pipeline(
         try:
             if events:
                 inserted = insert_events(connection, events)
-                refresh_sessions(connection, events)
+                session_keys = refresh_sessions(connection, events)
+                recalculate_scores(connection, session_keys)
                 indexed = index_events(
                     elasticsearch_url,
                     elasticsearch_index,

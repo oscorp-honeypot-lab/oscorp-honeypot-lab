@@ -5,6 +5,7 @@ from .rules import (
     RiskRuleSet,
     level_for_score,
 )
+from .scoring import RiskAssessment, RiskReason, SessionRiskInput, evaluate_session
 
 __all__ = [
     "ACTIVE_RULESET",
@@ -12,4 +13,8 @@ __all__ = [
     "RiskRule",
     "RiskRuleSet",
     "level_for_score",
+    "RiskAssessment",
+    "RiskReason",
+    "SessionRiskInput",
+    "evaluate_session",
 ]
