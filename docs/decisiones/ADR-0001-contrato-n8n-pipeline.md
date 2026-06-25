@@ -110,7 +110,8 @@ Los secretos se obtienen desde `.env`, se importan temporalmente con la CLI y se
 - La Fase 11 persiste el checkpoint incremental en PostgreSQL y audita los
   offsets de cada ejecución.
 - La programación periódica queda pendiente para una fase posterior.
-- La recuperación avanzada y el tratamiento de errores parciales quedan para la Fase 12.
+- La Fase 12 implementa reintentos idempotentes por `request_id`, estados
+  finales auditables y cuarentena de eventos inválidos.
 
 ## Consecuencias
 

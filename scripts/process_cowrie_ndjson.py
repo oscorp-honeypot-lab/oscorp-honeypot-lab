@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import sys
+import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -56,6 +57,8 @@ ON CONFLICT (event_hash) DO NOTHING
 """
 
 FINGERPRINT_BYTES = 4096
+ELASTICSEARCH_MAX_ATTEMPTS = 3
+RETRY_DELAY_SECONDS = 1
 
 
 @dataclass(frozen=True)
@@ -70,6 +73,7 @@ class FileIdentity:
 @dataclass(frozen=True)
 class ReadBatch:
     events: list[dict[str, Any]]
+    invalid_events: list["InvalidEvent"]
     next_offset: int
     next_line_number: int
     identity: FileIdentity
@@ -81,6 +85,15 @@ class ReadPosition:
     line_number: int
     reset_reason: str | None
     identity: FileIdentity
+
+
+@dataclass(frozen=True)
+class InvalidEvent:
+    line_number: int
+    byte_offset: int
+    error_code: str
+    error_detail: str
+    raw_line: str
 
 
 def normalize_timestamp(value: Any) -> datetime | None:
@@ -147,6 +160,7 @@ def read_events(
     start_line_number: int = 0,
 ) -> ReadBatch:
     events: list[dict[str, Any]] = []
+    invalid_events: list[InvalidEvent] = []
     next_offset = start_offset
     line_number = start_line_number
     with path.open("rb") as source:
@@ -164,15 +178,42 @@ def read_events(
             try:
                 raw_line = line.decode("utf-8").strip()
             except UnicodeDecodeError as exc:
-                raise ValueError(
-                    f"Invalid UTF-8 at line {line_number}: {exc}"
-                ) from exc
+                invalid_events.append(
+                    InvalidEvent(
+                        line_number=line_number,
+                        byte_offset=line_start,
+                        error_code="invalid_utf8",
+                        error_detail=str(exc),
+                        raw_line=line.decode("utf-8", errors="replace").strip(),
+                    )
+                )
+                continue
             if not raw_line:
                 continue
             try:
                 event = json.loads(raw_line)
             except json.JSONDecodeError as exc:
-                raise ValueError(f"Invalid NDJSON at line {line_number}: {exc}") from exc
+                invalid_events.append(
+                    InvalidEvent(
+                        line_number=line_number,
+                        byte_offset=line_start,
+                        error_code="invalid_json",
+                        error_detail=str(exc),
+                        raw_line=raw_line,
+                    )
+                )
+                continue
+            if not isinstance(event, dict):
+                invalid_events.append(
+                    InvalidEvent(
+                        line_number=line_number,
+                        byte_offset=line_start,
+                        error_code="invalid_event_shape",
+                        error_detail="Cowrie event must be a JSON object.",
+                        raw_line=raw_line,
+                    )
+                )
+                continue
             events.append(normalize_event(raw_line, event))
         stat = os.fstat(source.fileno())
         fingerprint_bytes = min(next_offset, FINGERPRINT_BYTES)
@@ -180,6 +221,7 @@ def read_events(
         fingerprint = hashlib.sha256(source.read(fingerprint_bytes)).hexdigest()
     return ReadBatch(
         events=events,
+        invalid_events=invalid_events,
         next_offset=next_offset,
         next_line_number=line_number,
         identity=FileIdentity(
@@ -280,16 +322,31 @@ def ensure_index(base_url: str, index: str) -> None:
         method="PUT",
         headers={"Content-Type": "application/json"},
     )
-    try:
-        with request.urlopen(req, timeout=30):
-            return
-    except HTTPError as exc:
-        if exc.code == 400:
-            return
-        body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(
-            f"Elasticsearch index creation failed: {exc.code} {body}"
-        ) from exc
+    last_error: Exception | None = None
+    for attempt in range(1, ELASTICSEARCH_MAX_ATTEMPTS + 1):
+        try:
+            with request.urlopen(req, timeout=30):
+                return
+        except HTTPError as exc:
+            if exc.code == 400:
+                return
+            last_error = exc
+            if exc.code < 500 and exc.code != 429:
+                break
+        except URLError as exc:
+            last_error = exc
+        if attempt < ELASTICSEARCH_MAX_ATTEMPTS:
+            time.sleep(RETRY_DELAY_SECONDS * attempt)
+
+    if isinstance(last_error, HTTPError):
+        body = last_error.read().decode("utf-8", errors="replace")
+        detail = f"{last_error.code} {body}"
+    else:
+        detail = str(last_error)
+    raise RuntimeError(
+        "Elasticsearch index creation failed after "
+        f"{ELASTICSEARCH_MAX_ATTEMPTS} attempts: {detail}"
+    ) from last_error
 
 
 def index_events(
@@ -316,11 +373,27 @@ def index_events(
         method="POST",
         headers={"Content-Type": "application/x-ndjson"},
     )
-    try:
-        with request.urlopen(req, timeout=60) as response:
-            result = json.loads(response.read().decode("utf-8"))
-    except URLError as exc:
-        raise RuntimeError(f"Elasticsearch bulk request failed: {exc}") from exc
+    result: dict[str, Any] | None = None
+    last_error: Exception | None = None
+    for attempt in range(1, ELASTICSEARCH_MAX_ATTEMPTS + 1):
+        try:
+            with request.urlopen(req, timeout=60) as response:
+                result = json.loads(response.read().decode("utf-8"))
+            break
+        except HTTPError as exc:
+            last_error = exc
+            if exc.code < 500 and exc.code != 429:
+                break
+        except URLError as exc:
+            last_error = exc
+        if attempt < ELASTICSEARCH_MAX_ATTEMPTS:
+            time.sleep(RETRY_DELAY_SECONDS * attempt)
+
+    if result is None:
+        raise RuntimeError(
+            "Elasticsearch bulk request failed after "
+            f"{ELASTICSEARCH_MAX_ATTEMPTS} attempts: {last_error}"
+        ) from last_error
 
     if result.get("errors"):
         failed = [
@@ -330,6 +403,44 @@ def index_events(
         ]
         raise RuntimeError(f"Elasticsearch rejected {len(failed)} documents")
     return len(events)
+
+
+def save_event_errors(
+    connection: psycopg.Connection[Any],
+    *,
+    run_id: int,
+    source_key: str,
+    invalid_events: list[InvalidEvent],
+) -> None:
+    if not invalid_events:
+        return
+    with connection.cursor() as cursor:
+        cursor.executemany(
+            """
+            INSERT INTO pipeline_event_errors (
+                run_id,
+                source_key,
+                line_number,
+                byte_offset,
+                error_code,
+                error_detail,
+                raw_line
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            [
+                (
+                    run_id,
+                    source_key,
+                    item.line_number,
+                    item.byte_offset,
+                    item.error_code,
+                    item.error_detail,
+                    item.raw_line,
+                )
+                for item in invalid_events
+            ],
+        )
 
 
 def insert_events(
@@ -350,6 +461,8 @@ def create_pipeline_run(
     connection: psycopg.Connection[Any],
     events_read: int,
     *,
+    request_id: str,
+    triggered_by: str,
     source_key: str,
     mode: str,
     source_offset_start: int,
@@ -364,9 +477,11 @@ def create_pipeline_run(
                 source_key,
                 mode,
                 source_offset_start,
-                checkpoint_reset_reason
+                checkpoint_reset_reason,
+                request_id,
+                triggered_by
             )
-            VALUES (%s, 'running', %s, %s, %s, %s)
+            VALUES (%s, 'running', %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
             (
@@ -375,6 +490,8 @@ def create_pipeline_run(
                 mode,
                 source_offset_start,
                 checkpoint_reset_reason,
+                request_id,
+                triggered_by,
             ),
         )
         run_id = int(cursor.fetchone()[0])
@@ -390,6 +507,8 @@ def finish_pipeline_run(
     status: str,
     errors: int = 0,
     source_offset_end: int | None = None,
+    error_code: str | None = None,
+    error_detail: str | None = None,
 ) -> None:
     with connection.cursor() as cursor:
         cursor.execute(
@@ -401,7 +520,9 @@ def finish_pipeline_run(
                 events_indexed = %s,
                 errors_count = %s,
                 status = %s,
-                source_offset_end = %s
+                source_offset_end = %s,
+                error_code = %s,
+                error_detail = %s
             WHERE id = %s
             """,
             (
@@ -410,6 +531,85 @@ def finish_pipeline_run(
                 errors,
                 status,
                 source_offset_end,
+                error_code,
+                error_detail,
+                run_id,
+            ),
+        )
+    connection.commit()
+
+
+def load_pipeline_run_by_request(
+    connection: psycopg.Connection[Any],
+    request_id: str,
+) -> dict[str, Any] | None:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                id,
+                status,
+                events_read,
+                events_inserted,
+                events_indexed,
+                errors_count,
+                error_code,
+                error_detail,
+                source_offset_start,
+                source_offset_end,
+                checkpoint_reset_reason
+            FROM pipeline_runs
+            WHERE request_id = %s
+            """,
+            (request_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        columns = [description.name for description in cursor.description]
+        cursor.execute(
+            """
+            UPDATE pipeline_runs
+            SET attempt_count = attempt_count + 1
+            WHERE request_id = %s
+            """,
+            (request_id,),
+        )
+    connection.commit()
+    return dict(zip(columns, row, strict=True))
+
+
+def reopen_pipeline_run(
+    connection: psycopg.Connection[Any],
+    *,
+    run_id: int,
+    events_read: int,
+    source_offset_start: int,
+    checkpoint_reset_reason: str | None,
+) -> None:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE pipeline_runs
+            SET
+                started_at = NOW(),
+                finished_at = NULL,
+                status = 'running',
+                events_read = %s,
+                events_inserted = 0,
+                events_indexed = 0,
+                errors_count = 0,
+                error_code = NULL,
+                error_detail = NULL,
+                source_offset_start = %s,
+                source_offset_end = NULL,
+                checkpoint_reset_reason = %s
+            WHERE id = %s
+            """,
+            (
+                events_read,
+                source_offset_start,
+                checkpoint_reset_reason,
                 run_id,
             ),
         )
@@ -576,6 +776,28 @@ def execute_pipeline(
         )
 
     with connection:
+        existing_run = load_pipeline_run_by_request(connection, request_id)
+        if existing_run is not None and existing_run["status"] in {
+            "completed",
+            "completed_with_errors",
+        }:
+            return build_result(
+                request_id,
+                str(existing_run["status"]),
+                run_id=int(existing_run["id"]),
+                events_read=int(existing_run["events_read"]),
+                events_inserted=int(existing_run["events_inserted"]),
+                events_indexed=int(existing_run["events_indexed"]),
+                errors_count=int(existing_run["errors_count"]),
+                error_code=existing_run["error_code"],
+                error_detail=existing_run["error_detail"],
+                source_offset_start=int(existing_run["source_offset_start"] or 0),
+                source_offset_end=int(existing_run["source_offset_end"] or 0),
+                checkpoint_reset_reason=existing_run[
+                    "checkpoint_reset_reason"
+                ],
+            )
+
         try:
             if mode == "incremental":
                 checkpoint = load_checkpoint(connection, source)
@@ -613,14 +835,26 @@ def execute_pipeline(
 
         events = batch.events
         try:
-            run_id = create_pipeline_run(
-                connection,
-                len(events),
-                source_key=source,
-                mode=mode,
-                source_offset_start=position.offset,
-                checkpoint_reset_reason=position.reset_reason,
-            )
+            if existing_run is None:
+                run_id = create_pipeline_run(
+                    connection,
+                    len(events),
+                    request_id=request_id,
+                    triggered_by=triggered_by,
+                    source_key=source,
+                    mode=mode,
+                    source_offset_start=position.offset,
+                    checkpoint_reset_reason=position.reset_reason,
+                )
+            else:
+                run_id = int(existing_run["id"])
+                reopen_pipeline_run(
+                    connection,
+                    run_id=run_id,
+                    events_read=len(events),
+                    source_offset_start=position.offset,
+                    checkpoint_reset_reason=position.reset_reason,
+                )
         except psycopg.Error as exc:
             connection.rollback()
             return build_result(
@@ -634,6 +868,7 @@ def execute_pipeline(
 
         inserted = 0
         indexed = 0
+        partial_errors = len(batch.invalid_events)
         try:
             if events:
                 inserted = insert_events(connection, events)
@@ -642,6 +877,12 @@ def execute_pipeline(
                     elasticsearch_index,
                     events,
                 )
+            save_event_errors(
+                connection,
+                run_id=run_id,
+                source_key=source,
+                invalid_events=batch.invalid_events,
+            )
             if mode == "incremental":
                 save_checkpoint(
                     connection,
@@ -656,11 +897,18 @@ def execute_pipeline(
                 run_id,
                 inserted,
                 indexed,
-                "completed",
+                "completed_with_errors" if partial_errors else "completed",
+                errors=partial_errors,
                 source_offset_end=batch.next_offset,
             )
         except Exception as exc:
             connection.rollback()
+            if isinstance(exc, psycopg.Error):
+                error_code = "postgres_write_failed"
+            elif "Elasticsearch" in str(exc):
+                error_code = "elasticsearch_failed"
+            else:
+                error_code = "pipeline_internal_error"
             try:
                 finish_pipeline_run(
                     connection,
@@ -670,16 +918,12 @@ def execute_pipeline(
                     "failed",
                     errors=1,
                     source_offset_end=batch.next_offset,
+                    error_code=error_code,
+                    error_detail=str(exc),
                 )
             except psycopg.Error:
                 connection.rollback()
 
-            if isinstance(exc, psycopg.Error):
-                error_code = "postgres_write_failed"
-            elif "Elasticsearch" in str(exc):
-                error_code = "elasticsearch_failed"
-            else:
-                error_code = "pipeline_internal_error"
             return build_result(
                 request_id,
                 "failed",
@@ -697,11 +941,12 @@ def execute_pipeline(
 
     return build_result(
         request_id,
-        "completed",
+        "completed_with_errors" if partial_errors else "completed",
         run_id=run_id,
         events_read=len(events),
         events_inserted=inserted,
         events_indexed=indexed,
+        errors_count=partial_errors,
         source_offset_start=position.offset,
         source_offset_end=batch.next_offset,
         checkpoint_reset_reason=position.reset_reason,
@@ -720,7 +965,7 @@ def main() -> int:
     print(f"elasticsearch_indexed={result['events_indexed']}")
     print(f"status={result['status']}")
     print(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
-    if result["status"] == "completed":
+    if result["status"] in {"completed", "completed_with_errors"}:
         return 0
 
     print(

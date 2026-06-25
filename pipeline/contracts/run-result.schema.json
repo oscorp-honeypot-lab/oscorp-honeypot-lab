@@ -11,7 +11,10 @@
     "events_read",
     "events_inserted",
     "events_indexed",
-    "errors_count"
+    "errors_count",
+    "source_offset_start",
+    "source_offset_end",
+    "checkpoint_reset_reason"
   ],
   "properties": {
     "contract_version": {

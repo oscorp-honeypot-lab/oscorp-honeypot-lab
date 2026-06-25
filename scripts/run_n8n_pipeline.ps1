@@ -39,14 +39,11 @@ if ($executionText -notmatch '"status":\s*"success"') {
 if ($executionText -notmatch '"run_id":\s*\d+') {
     throw "El workflow n8n no devolvió un pipeline_run."
 }
-if ($executionText -notmatch '"errors_count":\s*0') {
-    throw "El pipeline_run contiene errores."
-}
-
 $runId = @([regex]::Matches($executionText, '"run_id":\s*(\d+)'))[-1].Groups[1].Value
 $eventsRead = @([regex]::Matches($executionText, '"events_read":\s*(\d+)'))[-1].Groups[1].Value
 $eventsInserted = @([regex]::Matches($executionText, '"events_inserted":\s*(\d+)'))[-1].Groups[1].Value
 $eventsIndexed = @([regex]::Matches($executionText, '"events_indexed":\s*(\d+)'))[-1].Groups[1].Value
+$errorsCount = @([regex]::Matches($executionText, '"errors_count":\s*(\d+)'))[-1].Groups[1].Value
 $offsetStart = @([regex]::Matches($executionText, '"source_offset_start":\s*(\d+)'))[-1].Groups[1].Value
 $offsetEnd = @([regex]::Matches($executionText, '"source_offset_end":\s*(\d+)'))[-1].Groups[1].Value
 
@@ -54,7 +51,7 @@ Write-Output "run_id=$runId"
 Write-Output "events_read=$eventsRead"
 Write-Output "events_inserted=$eventsInserted"
 Write-Output "events_indexed=$eventsIndexed"
-Write-Output "errors_count=0"
+Write-Output "errors_count=$errorsCount"
 Write-Output "source_offset_start=$offsetStart"
 Write-Output "source_offset_end=$offsetEnd"
 Write-Host "[n8n-pipeline] Workflow completado."

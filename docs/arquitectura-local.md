@@ -31,6 +31,10 @@ pipeline_checkpoints
   Conserva offset, línea, fingerprint y última ejecución confirmada. Permite
   continuar después de reinicios y detectar truncado o reemplazo del log.
 
+pipeline_runs / pipeline_event_errors
+  Correlacionan solicitudes por request_id, registran intentos y estados, y
+  aíslan líneas inválidas sin detener la ingesta.
+
 pipeline
   Entrada de recuperación manual al procesador Python contenerizado. Relee el
   archivo completo sin modificar el checkpoint incremental.

@@ -113,6 +113,9 @@ scripts/setup.ps1
 scripts/validate_lab.ps1
 scripts/validate_n8n_contract.ps1
 scripts/validate_checkpoint.ps1
+scripts/validate_traceability.ps1
+scripts/validate_partial_errors.ps1
+scripts/validate_failure_recovery.ps1
 scripts/run_demo.ps1
 scripts/run_n8n_pipeline.ps1
 scripts/smoke_test.ps1

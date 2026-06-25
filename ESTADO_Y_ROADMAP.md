@@ -219,7 +219,7 @@ La validación operativa más reciente confirmó:
 ```text
 - ocho servicios persistentes del perfil LAB operativos;
 - configuración Docker Compose válida;
-- PostgreSQL y Elasticsearch sincronizados en 1602 registros;
+- PostgreSQL y Elasticsearch sincronizados en 1710 registros;
 - revisión Alembic 0002_pipeline_checkpoints aplicada y en head;
 - diez scripts PowerShell sin errores de sintaxis;
 - parser y migraciones Python válidos dentro del contenedor no-root;
@@ -236,7 +236,11 @@ La validación operativa más reciente confirmó:
 - checkpoint incremental persistente validado después de reiniciar el worker;
 - ejecución sucesiva sin novedades con events_read=0;
 - recuperación completa sin alterar el checkpoint incremental;
-- Fase 11 validada desde clon limpio con 106 eventos y checkpoint en byte 59504.
+- Fase 11 validada desde clon limpio con 106 eventos y checkpoint en byte 59504;
+- trazabilidad por request_id y reintentos idempotentes validados;
+- línea inválida aislada sin bloquear la ingesta;
+- caída de Elasticsearch recuperada sobre el mismo pipeline_run;
+- Fase 12 validada desde clon limpio con fallos controlados.
 ```
 
 Se verificaron los ocho servicios persistentes del perfil LAB en ejecución:
@@ -328,15 +332,16 @@ Estado acumulado de la validación más reciente:
 
 ```text
 PostgreSQL:
-- 1602 eventos
-- 1602 event_hash únicos
-- 275 sesiones
-- 37 ejecuciones en pipeline_runs
-- último run_id: 69
-- último evento: 2026-06-25 07:34:33.344901
+- 1710 eventos
+- 1710 event_hash únicos
+- 292 sesiones
+- 46 ejecuciones en pipeline_runs
+- último run_id: 78
+- último evento: 2026-06-25 08:26:54.546529
+- 1 evento inválido en cuarentena
 
 Elasticsearch:
-- 1602 documentos en cowrie-events
+- 1710 documentos en cowrie-events
 
 n8n:
 - versión efectiva 2.15.0
@@ -347,7 +352,7 @@ pipeline-worker:
 - contrato 1.0
 - servicio privado sin puerto publicado
 - ejecución concurrente protegida por lock
-- checkpoint en byte 296660 y línea 528
+- checkpoint en byte 356525 y línea 637
 
 Kibana:
 - estado general available
@@ -363,6 +368,7 @@ docs/evidencias/plan_aplicacion_web_2026-06-25.md
 docs/evidencias/fase9_contrato_n8n_pipeline.md
 docs/evidencias/fase10_orquestacion_n8n.md
 docs/evidencias/fase11_checkpoint_incremental.md
+docs/evidencias/fase12_trazabilidad_recuperacion.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -680,10 +686,32 @@ Búsqueda adicional:
 
 Objetivo: hacer observable y resistente la orquestación.
 
-- [ ] Registrar cada ejecución en `pipeline_runs`.
-- [ ] Manejar eventos inválidos y errores parciales.
-- [ ] Agregar reintentos controlados y estados finales claros.
-- [ ] Validar fallos y recuperación punta a punta con evidencia.
+- [x] Registrar cada ejecución en `pipeline_runs`.
+- [x] Manejar eventos inválidos y errores parciales.
+- [x] Agregar reintentos controlados y estados finales claros.
+- [x] Validar fallos y recuperación punta a punta con evidencia.
+
+### Skills de la fase
+
+```text
+- n8n-error-handling
+- python-expert-best-practices-code-review
+```
+
+### Resultado
+
+```text
+[x] migración 0003_pipeline_traceability
+[x] request_id único y attempt_count
+[x] reintentos idempotentes
+[x] cuarentena pipeline_event_errors
+[x] estado completed_with_errors
+[x] reintentos Elasticsearch limitados a 3
+[x] recuperación sobre el mismo run_id
+[x] siete pruebas Python superadas
+[x] smoke test integral superado
+[x] clon limpio con cuarentena y recuperación validado
+```
 
 ## Fase 13 — Modelo de sesiones correlacionadas
 

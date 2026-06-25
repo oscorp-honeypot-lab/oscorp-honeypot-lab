@@ -1,7 +1,7 @@
 {
   "id": "oscorp-cowrie-ndjson-pipeline",
   "name": "OSCORP - Cowrie Pipeline Orchestration",
-  "description": "Fase 11: n8n invoca al worker incremental, valida offsets y confirma pipeline_runs.",
+  "description": "Fase 12: n8n invoca al worker trazable, acepta errores parciales y confirma pipeline_runs.",
   "active": false,
   "nodes": [
     {
@@ -53,7 +53,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const required = ['contract_version', 'request_id', 'status', 'events_read', 'events_inserted', 'events_indexed', 'errors_count'];\nfor (const item of $input.all()) {\n  for (const field of required) {\n    if (!(field in item.json)) throw new Error(`INVALID_WORKER_RESULT: missing ${field}`);\n  }\n  if (item.json.contract_version !== '1.0') throw new Error('INVALID_WORKER_RESULT: contract version');\n  if (item.json.status !== 'completed') throw new Error(`PIPELINE_FAILED: ${item.json.error_code || 'unknown'}`);\n}\nreturn $input.all();"
+        "jsCode": "const required = ['contract_version', 'request_id', 'status', 'events_read', 'events_inserted', 'events_indexed', 'errors_count', 'source_offset_start', 'source_offset_end'];\nfor (const item of $input.all()) {\n  for (const field of required) {\n    if (!(field in item.json)) throw new Error(`INVALID_WORKER_RESULT: missing ${field}`);\n  }\n  if (item.json.contract_version !== '1.0') throw new Error('INVALID_WORKER_RESULT: contract version');\n  if (!['completed', 'completed_with_errors'].includes(item.json.status)) throw new Error(`PIPELINE_FAILED: ${item.json.error_code || 'unknown'}`);\n}\nreturn $input.all();"
       },
       "id": "ad903292-35f3-4586-a11e-685330596756",
       "name": "Validate Worker Result",
@@ -67,7 +67,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id AS run_id, status, events_read, events_inserted, events_indexed, errors_count, source_offset_start, source_offset_end, checkpoint_reset_reason FROM pipeline_runs WHERE id = $1;",
+        "query": "SELECT id AS run_id, request_id, triggered_by, status, events_read, events_inserted, events_indexed, errors_count, source_offset_start, source_offset_end, checkpoint_reset_reason, error_code FROM pipeline_runs WHERE id = $1;",
         "options": {
           "queryReplacement": "={{ $json.run_id }}"
         }
@@ -89,7 +89,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nif (items.length !== 1) throw new Error('PIPELINE_RUN_NOT_FOUND');\nconst run = items[0].json;\nif (run.status !== 'completed' || Number(run.errors_count) !== 0) {\n  throw new Error(`PIPELINE_RUN_INVALID: ${run.status}`);\n}\nreturn items;"
+        "jsCode": "const items = $input.all();\nif (items.length !== 1) throw new Error('PIPELINE_RUN_NOT_FOUND');\nconst run = items[0].json;\nif (!['completed', 'completed_with_errors'].includes(run.status)) {\n  throw new Error(`PIPELINE_RUN_INVALID: ${run.status}`);\n}\nreturn items;"
       },
       "id": "78875df8-2a67-4492-82cf-a3e7a3872438",
       "name": "Validate Pipeline Run",

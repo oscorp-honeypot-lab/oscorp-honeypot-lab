@@ -4,10 +4,14 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+from urllib.error import URLError
 
+import process_cowrie_ndjson
 from process_cowrie_ndjson import (
     determine_read_position,
     file_identity,
+    index_events,
     read_events,
 )
 
@@ -111,6 +115,51 @@ class IncrementalReaderTests(unittest.TestCase):
         self.assertEqual(len(batch.events), 1)
         self.assertEqual(batch.next_offset, len(complete))
         self.assertEqual(batch.next_line_number, 1)
+
+    def test_invalid_complete_line_is_quarantined_and_skipped(self) -> None:
+        valid = event_line(1)
+        invalid = b'{"eventid":invalid}\n'
+        self.path.write_bytes(valid + invalid + event_line(2))
+
+        batch = read_events(self.path)
+
+        self.assertEqual(len(batch.events), 2)
+        self.assertEqual(len(batch.invalid_events), 1)
+        self.assertEqual(batch.invalid_events[0].error_code, "invalid_json")
+        self.assertEqual(batch.invalid_events[0].line_number, 2)
+        self.assertEqual(batch.next_line_number, 3)
+
+    def test_elasticsearch_transient_errors_are_retried(self) -> None:
+        class Response:
+            def __enter__(self) -> "Response":
+                return self
+
+            def __exit__(self, *args: object) -> None:
+                return None
+
+            def read(self) -> bytes:
+                return b'{"errors":false,"items":[]}'
+
+        event = read_events(
+            self._write(event_line(1))
+        ).events[0]
+        with (
+            patch.object(process_cowrie_ndjson, "ensure_index"),
+            patch.object(process_cowrie_ndjson.time, "sleep"),
+            patch.object(
+                process_cowrie_ndjson.request,
+                "urlopen",
+                side_effect=[URLError("temporary"), URLError("temporary"), Response()],
+            ) as urlopen,
+        ):
+            indexed = index_events("http://elasticsearch:9200", "events", [event])
+
+        self.assertEqual(indexed, 1)
+        self.assertEqual(urlopen.call_count, 3)
+
+    def _write(self, content: bytes) -> Path:
+        self.path.write_bytes(content)
+        return self.path
 
 
 if __name__ == "__main__":
