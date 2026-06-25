@@ -240,7 +240,9 @@ La validación operativa más reciente confirmó:
 - trazabilidad por request_id y reintentos idempotentes validados;
 - línea inválida aislada sin bloquear la ingesta;
 - caída de Elasticsearch recuperada sobre el mismo pipeline_run;
-- Fase 12 validada desde clon limpio con fallos controlados.
+- Fase 12 validada desde clon limpio con fallos controlados;
+- modelo de sesiones Fase 13.1 contrastado con 292 sesiones reales:
+  290 completas y 2 incompletas.
 ```
 
 Se verificaron los ocho servicios persistentes del perfil LAB en ejecución:
@@ -369,6 +371,7 @@ docs/evidencias/fase9_contrato_n8n_pipeline.md
 docs/evidencias/fase10_orquestacion_n8n.md
 docs/evidencias/fase11_checkpoint_incremental.md
 docs/evidencias/fase12_trazabilidad_recuperacion.md
+docs/evidencias/fase13_1_diseno_sesiones.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -717,10 +720,29 @@ Objetivo: hacer observable y resistente la orquestación.
 
 Objetivo: construir la unidad analítica principal del sistema.
 
-- [ ] Diseñar la entidad, tabla o vista de sesiones.
+- [x] Diseñar la entidad, tabla o vista de sesiones.
 - [ ] Agrupar eventos por `session_id`.
 - [ ] Calcular inicio, fin, duración y resumen de actividad.
 - [ ] Crear la migración y validar sesiones completas e incompletas.
+
+### Subfases
+
+```text
+[x] Fase 13.1 - Diseño del modelo de sesión
+[ ] Fase 13.2 - Agrupación y proyección
+[ ] Fase 13.3 - Tiempos y resumen de actividad
+[ ] Fase 13.4 - Migración, backfill y validación
+```
+
+### Resultado de Fase 13.1
+
+```text
+[x] tabla materializada sessions seleccionada
+[x] identidad session_key definida
+[x] estados complete, open e incomplete definidos
+[x] campos, índices e invariantes documentados
+[x] diseño contrastado con 292 sesiones reales
+```
 
 ## Fase 14 — Reglas versionadas de Attack Risk Score
 
