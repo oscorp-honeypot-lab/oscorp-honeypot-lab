@@ -61,6 +61,20 @@
         "string",
         "null"
       ]
+    },
+    "source_offset_start": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source_offset_end": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "checkpoint_reset_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
     }
   }
 }

@@ -45,9 +45,29 @@ function Get-ElasticsearchEventCount {
     return $count
 }
 
+function Get-PipelineMetric {
+    param(
+        [string[]]$Output,
+        [string]$Name
+    )
+
+    $match = @(
+        $Output |
+            Select-String -Pattern "^$([regex]::Escape($Name))=(\d+)$"
+    )[-1]
+    if (-not $match) {
+        throw "No se encontró la métrica $Name."
+    }
+    return [long]$match.Matches[0].Groups[1].Value
+}
+
 if (-not $SkipValidation) {
     & "$PSScriptRoot\validate_lab.ps1"
 }
+
+Write-Host "[demo] Sincronizando checkpoint incremental..."
+$checkpointOutput = & "$PSScriptRoot\run_n8n_pipeline.ps1"
+$checkpointOutput | Write-Output
 
 $beforePostgres = Get-PostgresEventCount
 $beforeElasticsearch = Get-ElasticsearchEventCount
@@ -89,7 +109,11 @@ if (-not ($newEvents.url -match "^http://payload-server:8080/")) {
 }
 
 Write-Host "[demo] Ejecutando pipeline orquestado por n8n..."
-& "$PSScriptRoot\run_n8n_pipeline.ps1"
+$pipelineOutput = & "$PSScriptRoot\run_n8n_pipeline.ps1"
+$pipelineOutput | Write-Output
+if ((Get-PipelineMetric $pipelineOutput "events_read") -le 0) {
+    throw "El pipeline incremental no leyó los eventos nuevos."
+}
 
 $afterPostgres = Get-PostgresEventCount
 $afterElasticsearch = Get-ElasticsearchEventCount
@@ -104,7 +128,17 @@ if ($afterPostgres -ne $afterElasticsearch) {
 }
 
 Write-Host "[demo] Verificando idempotencia..."
-& "$PSScriptRoot\run_n8n_pipeline.ps1"
+$idempotentOutput = & "$PSScriptRoot\run_n8n_pipeline.ps1"
+$idempotentOutput | Write-Output
+if ((Get-PipelineMetric $idempotentOutput "events_read") -ne 0) {
+    throw "La segunda ejecución releyó eventos ya confirmados."
+}
+if (
+    (Get-PipelineMetric $idempotentOutput "source_offset_start") -ne
+    (Get-PipelineMetric $idempotentOutput "source_offset_end")
+) {
+    throw "La segunda ejecución avanzó el offset sin eventos nuevos."
+}
 $idempotentPostgres = Get-PostgresEventCount
 $idempotentElasticsearch = Get-ElasticsearchEventCount
 if ($idempotentPostgres -ne $afterPostgres) {

@@ -214,13 +214,13 @@ Actualización final de la tesis:            Pendiente hasta finalizar el sistem
 
 Última validación: **25 de junio de 2026**.
 
-La validación operativa de la Fase 10 confirmó:
+La validación operativa más reciente confirmó:
 
 ```text
 - ocho servicios persistentes del perfil LAB operativos;
 - configuración Docker Compose válida;
-- PostgreSQL y Elasticsearch sincronizados en 1496 registros;
-- revisión Alembic 0001_initial_schema aplicada y en head;
+- PostgreSQL y Elasticsearch sincronizados en 1602 registros;
+- revisión Alembic 0002_pipeline_checkpoints aplicada y en head;
 - diez scripts PowerShell sin errores de sintaxis;
 - parser y migraciones Python válidos dentro del contenedor no-root;
 - artefactos y evidencia de instalación desde clon limpio presentes;
@@ -232,7 +232,11 @@ La validación operativa de la Fase 10 confirmó:
 - workflow n8n ejecutando, validando y confirmando pipeline_runs;
 - smoke test completo utilizando n8n en lugar del pipeline manual;
 - ejecución inicial sin eventos registrada correctamente en pipeline_runs;
-- clon limpio finalizado con 105 eventos, 15 sesiones y 0 duplicados.
+- clon limpio finalizado con 105 eventos, 15 sesiones y 0 duplicados;
+- checkpoint incremental persistente validado después de reiniciar el worker;
+- ejecución sucesiva sin novedades con events_read=0;
+- recuperación completa sin alterar el checkpoint incremental;
+- Fase 11 validada desde clon limpio con 106 eventos y checkpoint en byte 59504.
 ```
 
 Se verificaron los ocho servicios persistentes del perfil LAB en ejecución:
@@ -272,8 +276,8 @@ Resultado:
 ```text
 [validate] LAB válido
 [demo] Flujo completo validado
-[demo] Eventos nuevos en PostgreSQL: 104
-[demo] Total acumulado: 1496
+[demo] Eventos nuevos en PostgreSQL: 106
+[demo] Total acumulado: 1602
 [smoke] Prueba integral superada
 ```
 
@@ -284,7 +288,7 @@ Origen: clon local nuevo del commit de Fase 8
 Estado inicial: sin .env y con volúmenes Docker vacíos
 Comando: .\scripts\smoke_test.ps1
 
-Alembic: 0001_initial_schema aplicado correctamente
+Alembic: 0002_pipeline_checkpoints aplicado correctamente
 PostgreSQL: 106 eventos
 Elasticsearch: 106 documentos
 Segunda ingesta: 0 eventos duplicados
@@ -301,34 +305,38 @@ http://payload-server:8080/bot.sh
 Resultado del pipeline e idempotencia:
 
 ```text
-Primera ejecución n8n:
-- run_id=57
-- events_read=422
-- events_inserted=104
-- events_indexed=422
+Primera ejecución incremental n8n:
+- run_id=64
+- events_read=106
+- events_inserted=106
+- events_indexed=106
 - errors_count=0
+- source_offset_start=237156
+- source_offset_end=296660
 
 Segunda ejecución n8n:
-- run_id=58
-- events_read=422
+- run_id=65
+- events_read=0
 - events_inserted=0
-- events_indexed=422
+- events_indexed=0
 - errors_count=0
+- source_offset_start=296660
+- source_offset_end=296660
 ```
 
 Estado acumulado de la validación más reciente:
 
 ```text
 PostgreSQL:
-- 1496 eventos
-- 1496 event_hash únicos
-- 260 sesiones
-- 26 ejecuciones en pipeline_runs
-- último run_id: 58
-- último evento: 2026-06-25 07:05:39.936686
+- 1602 eventos
+- 1602 event_hash únicos
+- 275 sesiones
+- 37 ejecuciones en pipeline_runs
+- último run_id: 69
+- último evento: 2026-06-25 07:34:33.344901
 
 Elasticsearch:
-- 1496 documentos en cowrie-events
+- 1602 documentos en cowrie-events
 
 n8n:
 - versión efectiva 2.15.0
@@ -339,6 +347,7 @@ pipeline-worker:
 - contrato 1.0
 - servicio privado sin puerto publicado
 - ejecución concurrente protegida por lock
+- checkpoint en byte 296660 y línea 528
 
 Kibana:
 - estado general available
@@ -353,6 +362,7 @@ docs/evidencias/auditoria_fase8_y_replanificacion_2026-06-25.md
 docs/evidencias/plan_aplicacion_web_2026-06-25.md
 docs/evidencias/fase9_contrato_n8n_pipeline.md
 docs/evidencias/fase10_orquestacion_n8n.md
+docs/evidencias/fase11_checkpoint_incremental.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -377,8 +387,7 @@ docs/arquitectura-aplicacion-web-plan.md
 ### Altos
 
 - PostgreSQL, Elasticsearch, Kibana y n8n publican puertos con configuración de laboratorio y credenciales por defecto.
-- El workflow n8n continúa manual e inactivo; la programación corresponde a la Fase 11.
-- Cada ejecución todavía relee el NDJSON completo; falta cursor/checkpoint incremental.
+- El workflow n8n continúa manual e inactivo; la programación periódica todavía está pendiente.
 - El modo `real` todavía no aplica endurecimiento, autenticación ni separación de secretos suficiente para exposición pública.
 - La imagen `attacker-sim` es grande por las dependencias de Hydra y puede optimizarse en una fase de rendimiento.
 
@@ -633,10 +642,39 @@ Reutilizados:
 
 Objetivo: procesar solamente los eventos pendientes.
 
-- [ ] Diseñar cursor, offset o checkpoint persistente.
-- [ ] Evitar reprocesamiento después de reinicios.
-- [ ] Definir recuperación cuando cambia o se rota `cowrie.json`.
-- [ ] Probar ejecuciones sucesivas sin duplicados ni pérdida de eventos.
+- [x] Diseñar cursor, offset o checkpoint persistente.
+- [x] Evitar reprocesamiento después de reinicios.
+- [x] Definir recuperación cuando cambia o se rota `cowrie.json`.
+- [x] Probar ejecuciones sucesivas sin duplicados ni pérdida de eventos.
+
+### Skills de la fase
+
+```text
+Utilizados:
+- n8n-workflow
+- python-expert-best-practices-code-review
+
+Búsqueda adicional:
+- checkpoint incremental NDJSON
+- cursor persistente
+- rotación de archivos
+```
+
+### Resultado
+
+```text
+[x] migración 0002_pipeline_checkpoints
+[x] lectura binaria desde byte_offset
+[x] líneas parciales conservadas para la siguiente ejecución
+[x] detección de truncado y reemplazo
+[x] checkpoint actualizado solo después de PostgreSQL y Elasticsearch
+[x] reinicio del worker con events_read=0
+[x] recuperación completa sin mover el checkpoint
+[x] cinco pruebas automáticas superadas
+[x] smoke incremental: 106 eventos nuevos y segunda lectura en cero
+[x] 1602 eventos sincronizados
+[x] clon limpio: 106 eventos, 15 sesiones y checkpoint persistente
+```
 
 ## Fase 12 — Trazabilidad y recuperación del pipeline
 

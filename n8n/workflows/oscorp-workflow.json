@@ -1,7 +1,7 @@
 {
   "id": "oscorp-cowrie-ndjson-pipeline",
   "name": "OSCORP - Cowrie Pipeline Orchestration",
-  "description": "Fase 10: n8n crea una solicitud versionada, invoca al worker privado y confirma pipeline_runs.",
+  "description": "Fase 11: n8n invoca al worker incremental, valida offsets y confirma pipeline_runs.",
   "active": false,
   "nodes": [
     {
@@ -67,7 +67,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id AS run_id, status, events_read, events_inserted, events_indexed, errors_count FROM pipeline_runs WHERE id = $1;",
+        "query": "SELECT id AS run_id, status, events_read, events_inserted, events_indexed, errors_count, source_offset_start, source_offset_end, checkpoint_reset_reason FROM pipeline_runs WHERE id = $1;",
         "options": {
           "queryReplacement": "={{ $json.run_id }}"
         }

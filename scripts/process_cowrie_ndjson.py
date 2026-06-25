@@ -8,6 +8,7 @@ import json
 import os
 import sys
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -54,6 +55,33 @@ VALUES (
 ON CONFLICT (event_hash) DO NOTHING
 """
 
+FINGERPRINT_BYTES = 4096
+
+
+@dataclass(frozen=True)
+class FileIdentity:
+    device: int
+    inode: int
+    fingerprint_hash: str
+    fingerprint_bytes: int
+    size: int
+
+
+@dataclass(frozen=True)
+class ReadBatch:
+    events: list[dict[str, Any]]
+    next_offset: int
+    next_line_number: int
+    identity: FileIdentity
+
+
+@dataclass(frozen=True)
+class ReadPosition:
+    offset: int
+    line_number: int
+    reset_reason: str | None
+    identity: FileIdentity
+
 
 def normalize_timestamp(value: Any) -> datetime | None:
     if not value:
@@ -93,11 +121,52 @@ def normalize_event(raw_line: str, event: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def read_events(path: Path) -> list[dict[str, Any]]:
+def file_identity(
+    path: Path,
+    fingerprint_bytes: int | None = None,
+) -> FileIdentity:
+    stat = path.stat()
+    sample_size = min(
+        stat.st_size,
+        FINGERPRINT_BYTES if fingerprint_bytes is None else fingerprint_bytes,
+    )
+    with path.open("rb") as source:
+        sample = source.read(sample_size)
+    return FileIdentity(
+        device=stat.st_dev,
+        inode=stat.st_ino,
+        fingerprint_hash=hashlib.sha256(sample).hexdigest(),
+        fingerprint_bytes=sample_size,
+        size=stat.st_size,
+    )
+
+
+def read_events(
+    path: Path,
+    start_offset: int = 0,
+    start_line_number: int = 0,
+) -> ReadBatch:
     events: list[dict[str, Any]] = []
-    with path.open("r", encoding="utf-8") as source:
-        for line_number, line in enumerate(source, start=1):
-            raw_line = line.strip()
+    next_offset = start_offset
+    line_number = start_line_number
+    with path.open("rb") as source:
+        source.seek(start_offset)
+        while True:
+            line_start = source.tell()
+            line = source.readline()
+            if not line:
+                break
+            if not line.endswith(b"\n"):
+                next_offset = line_start
+                break
+            line_number += 1
+            next_offset = source.tell()
+            try:
+                raw_line = line.decode("utf-8").strip()
+            except UnicodeDecodeError as exc:
+                raise ValueError(
+                    f"Invalid UTF-8 at line {line_number}: {exc}"
+                ) from exc
             if not raw_line:
                 continue
             try:
@@ -105,7 +174,83 @@ def read_events(path: Path) -> list[dict[str, Any]]:
             except json.JSONDecodeError as exc:
                 raise ValueError(f"Invalid NDJSON at line {line_number}: {exc}") from exc
             events.append(normalize_event(raw_line, event))
-    return events
+        stat = os.fstat(source.fileno())
+        fingerprint_bytes = min(next_offset, FINGERPRINT_BYTES)
+        source.seek(0)
+        fingerprint = hashlib.sha256(source.read(fingerprint_bytes)).hexdigest()
+    return ReadBatch(
+        events=events,
+        next_offset=next_offset,
+        next_line_number=line_number,
+        identity=FileIdentity(
+            device=stat.st_dev,
+            inode=stat.st_ino,
+            fingerprint_hash=fingerprint,
+            fingerprint_bytes=fingerprint_bytes,
+            size=stat.st_size,
+        ),
+    )
+
+
+def load_checkpoint(
+    connection: psycopg.Connection[Any],
+    source_key: str,
+) -> dict[str, Any] | None:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                source_key,
+                file_device,
+                file_inode,
+                fingerprint_hash,
+                fingerprint_bytes,
+                byte_offset,
+                line_number,
+                file_size,
+                reset_count
+            FROM pipeline_checkpoints
+            WHERE source_key = %s
+            """,
+            (source_key,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        columns = [description.name for description in cursor.description]
+    return dict(zip(columns, row, strict=True))
+
+
+def determine_read_position(
+    path: Path,
+    checkpoint: dict[str, Any] | None,
+) -> ReadPosition:
+    current = file_identity(path)
+    if checkpoint is None:
+        return ReadPosition(0, 0, None, current)
+
+    offset = int(checkpoint["byte_offset"])
+    if current.size < offset:
+        return ReadPosition(0, 0, "file_truncated", current)
+
+    fingerprint_bytes = int(checkpoint["fingerprint_bytes"])
+    comparable = file_identity(path, fingerprint_bytes)
+    if comparable.fingerprint_hash != checkpoint["fingerprint_hash"]:
+        return ReadPosition(0, 0, "file_replaced", current)
+
+    stored_identity = FileIdentity(
+        device=current.device,
+        inode=current.inode,
+        fingerprint_hash=str(checkpoint["fingerprint_hash"]),
+        fingerprint_bytes=fingerprint_bytes,
+        size=current.size,
+    )
+    return ReadPosition(
+        offset,
+        int(checkpoint["line_number"]),
+        None,
+        stored_identity,
+    )
 
 
 def ensure_index(base_url: str, index: str) -> None:
@@ -204,15 +349,33 @@ def insert_events(
 def create_pipeline_run(
     connection: psycopg.Connection[Any],
     events_read: int,
+    *,
+    source_key: str,
+    mode: str,
+    source_offset_start: int,
+    checkpoint_reset_reason: str | None,
 ) -> int:
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            INSERT INTO pipeline_runs (events_read, status)
-            VALUES (%s, 'running')
+            INSERT INTO pipeline_runs (
+                events_read,
+                status,
+                source_key,
+                mode,
+                source_offset_start,
+                checkpoint_reset_reason
+            )
+            VALUES (%s, 'running', %s, %s, %s, %s)
             RETURNING id
             """,
-            (events_read,),
+            (
+                events_read,
+                source_key,
+                mode,
+                source_offset_start,
+                checkpoint_reset_reason,
+            ),
         )
         run_id = int(cursor.fetchone()[0])
     connection.commit()
@@ -226,6 +389,7 @@ def finish_pipeline_run(
     indexed: int,
     status: str,
     errors: int = 0,
+    source_offset_end: int | None = None,
 ) -> None:
     with connection.cursor() as cursor:
         cursor.execute(
@@ -236,12 +400,81 @@ def finish_pipeline_run(
                 events_inserted = %s,
                 events_indexed = %s,
                 errors_count = %s,
-                status = %s
+                status = %s,
+                source_offset_end = %s
             WHERE id = %s
             """,
-            (inserted, indexed, errors, status, run_id),
+            (
+                inserted,
+                indexed,
+                errors,
+                status,
+                source_offset_end,
+                run_id,
+            ),
         )
     connection.commit()
+
+
+def save_checkpoint(
+    connection: psycopg.Connection[Any],
+    *,
+    source_key: str,
+    identity: FileIdentity,
+    batch: ReadBatch,
+    run_id: int,
+    reset_reason: str | None,
+) -> None:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO pipeline_checkpoints (
+                source_key,
+                file_device,
+                file_inode,
+                fingerprint_hash,
+                fingerprint_bytes,
+                byte_offset,
+                line_number,
+                file_size,
+                last_run_id,
+                reset_count,
+                last_reset_reason,
+                updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+            ON CONFLICT (source_key) DO UPDATE
+            SET
+                file_device = EXCLUDED.file_device,
+                file_inode = EXCLUDED.file_inode,
+                fingerprint_hash = EXCLUDED.fingerprint_hash,
+                fingerprint_bytes = EXCLUDED.fingerprint_bytes,
+                byte_offset = EXCLUDED.byte_offset,
+                line_number = EXCLUDED.line_number,
+                file_size = EXCLUDED.file_size,
+                last_run_id = EXCLUDED.last_run_id,
+                reset_count = pipeline_checkpoints.reset_count
+                    + CASE WHEN EXCLUDED.last_reset_reason IS NULL THEN 0 ELSE 1 END,
+                last_reset_reason = COALESCE(
+                    EXCLUDED.last_reset_reason,
+                    pipeline_checkpoints.last_reset_reason
+                ),
+                updated_at = NOW()
+            """,
+            (
+                source_key,
+                identity.device,
+                identity.inode,
+                identity.fingerprint_hash,
+                identity.fingerprint_bytes,
+                batch.next_offset,
+                batch.next_line_number,
+                identity.size,
+                run_id,
+                1 if reset_reason else 0,
+                reset_reason,
+            ),
+        )
 
 
 def build_result(
@@ -255,6 +488,9 @@ def build_result(
     errors_count: int = 0,
     error_code: str | None = None,
     error_detail: str | None = None,
+    source_offset_start: int = 0,
+    source_offset_end: int = 0,
+    checkpoint_reset_reason: str | None = None,
 ) -> dict[str, Any]:
     return {
         "contract_version": "1.0",
@@ -267,6 +503,9 @@ def build_result(
         "errors_count": errors_count,
         "error_code": error_code,
         "error_detail": error_detail,
+        "source_offset_start": source_offset_start,
+        "source_offset_end": source_offset_end,
+        "checkpoint_reset_reason": checkpoint_reset_reason,
     }
 
 
@@ -326,22 +565,11 @@ def execute_pipeline(
         )
 
     try:
-        events = read_events(log_path)
-    except (OSError, ValueError) as exc:
-        return build_result(
-            request_id,
-            "failed",
-            errors_count=1,
-            error_code="source_invalid",
-            error_detail=str(exc),
-        )
-    try:
         connection = psycopg.connect(database_url)
     except psycopg.Error as exc:
         return build_result(
             request_id,
             "failed",
-            events_read=len(events),
             errors_count=1,
             error_code="postgres_unavailable",
             error_detail=str(exc),
@@ -349,7 +577,50 @@ def execute_pipeline(
 
     with connection:
         try:
-            run_id = create_pipeline_run(connection, len(events))
+            if mode == "incremental":
+                checkpoint = load_checkpoint(connection, source)
+                position = determine_read_position(log_path, checkpoint)
+            else:
+                position = ReadPosition(
+                    offset=0,
+                    line_number=0,
+                    reset_reason=None,
+                    identity=file_identity(log_path),
+                )
+            batch = read_events(
+                log_path,
+                position.offset,
+                position.line_number,
+            )
+        except psycopg.Error as exc:
+            connection.rollback()
+            return build_result(
+                request_id,
+                "failed",
+                errors_count=1,
+                error_code="postgres_checkpoint_read_failed",
+                error_detail=str(exc),
+            )
+        except (OSError, ValueError) as exc:
+            connection.rollback()
+            return build_result(
+                request_id,
+                "failed",
+                errors_count=1,
+                error_code="source_invalid",
+                error_detail=str(exc),
+            )
+
+        events = batch.events
+        try:
+            run_id = create_pipeline_run(
+                connection,
+                len(events),
+                source_key=source,
+                mode=mode,
+                source_offset_start=position.offset,
+                checkpoint_reset_reason=position.reset_reason,
+            )
         except psycopg.Error as exc:
             connection.rollback()
             return build_result(
@@ -371,12 +642,22 @@ def execute_pipeline(
                     elasticsearch_index,
                     events,
                 )
+            if mode == "incremental":
+                save_checkpoint(
+                    connection,
+                    source_key=source,
+                    identity=batch.identity,
+                    batch=batch,
+                    run_id=run_id,
+                    reset_reason=position.reset_reason,
+                )
             finish_pipeline_run(
                 connection,
                 run_id,
                 inserted,
                 indexed,
                 "completed",
+                source_offset_end=batch.next_offset,
             )
         except Exception as exc:
             connection.rollback()
@@ -388,6 +669,7 @@ def execute_pipeline(
                     indexed,
                     "failed",
                     errors=1,
+                    source_offset_end=batch.next_offset,
                 )
             except psycopg.Error:
                 connection.rollback()
@@ -408,6 +690,9 @@ def execute_pipeline(
                 errors_count=1,
                 error_code=error_code,
                 error_detail=str(exc),
+                source_offset_start=position.offset,
+                source_offset_end=batch.next_offset,
+                checkpoint_reset_reason=position.reset_reason,
             )
 
     return build_result(
@@ -417,6 +702,9 @@ def execute_pipeline(
         events_read=len(events),
         events_inserted=inserted,
         events_indexed=indexed,
+        source_offset_start=position.offset,
+        source_offset_end=batch.next_offset,
+        checkpoint_reset_reason=position.reset_reason,
     )
 
 
@@ -447,6 +735,7 @@ def main() -> int:
         "source_invalid": 3,
         "postgres_unavailable": 4,
         "postgres_run_create_failed": 4,
+        "postgres_checkpoint_read_failed": 4,
         "postgres_write_failed": 4,
         "elasticsearch_failed": 5,
     }.get(str(result["error_code"]), 10)

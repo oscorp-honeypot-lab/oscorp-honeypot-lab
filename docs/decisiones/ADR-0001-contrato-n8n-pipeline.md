@@ -107,7 +107,9 @@ Los secretos se obtienen desde `.env`, se importan temporalmente con la CLI y se
 - n8n no recibirá contraseñas de base de datos dentro del workflow JSON.
 - El worker no aceptará rutas de archivos arbitrarias desde el workflow.
 - El workflow permanece inactivo para ejecución manual controlada durante las pruebas.
-- La programación y el checkpoint incremental quedan para la Fase 11.
+- La Fase 11 persiste el checkpoint incremental en PostgreSQL y audita los
+  offsets de cada ejecución.
+- La programación periódica queda pendiente para una fase posterior.
 - La recuperación avanzada y el tratamiento de errores parciales quedan para la Fase 12.
 
 ## Consecuencias

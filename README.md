@@ -77,6 +77,10 @@ PostgreSQL: tabla eventos
 Elasticsearch: indice cowrie-events
 ```
 
+La ejecución normal usa un checkpoint persistente en PostgreSQL y procesa
+solo líneas nuevas. `run_pipeline.ps1` mantiene la recuperación completa sin
+alterar ese checkpoint.
+
 ## Demo y validación
 
 ```powershell
@@ -108,6 +112,7 @@ scripts/run_pipeline.ps1
 scripts/setup.ps1
 scripts/validate_lab.ps1
 scripts/validate_n8n_contract.ps1
+scripts/validate_checkpoint.ps1
 scripts/run_demo.ps1
 scripts/run_n8n_pipeline.ps1
 scripts/smoke_test.ps1
