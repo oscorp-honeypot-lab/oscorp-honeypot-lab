@@ -47,3 +47,6 @@ El ADR `docs/decisiones/ADR-0002-modelo-sesiones.md` define:
 ```
 
 No se modificó el esquema de base de datos en esta subfase.
+
+Los tres documentos de la entrega se verificaron desde un clon limpio del
+commit candidato.

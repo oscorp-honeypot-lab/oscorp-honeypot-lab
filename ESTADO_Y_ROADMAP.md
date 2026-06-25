@@ -219,9 +219,9 @@ La validación operativa más reciente confirmó:
 ```text
 - ocho servicios persistentes del perfil LAB operativos;
 - configuración Docker Compose válida;
-- PostgreSQL y Elasticsearch sincronizados en 1710 registros;
-- revisión Alembic 0002_pipeline_checkpoints aplicada y en head;
-- diez scripts PowerShell sin errores de sintaxis;
+- PostgreSQL y Elasticsearch sincronizados en 1818 registros;
+- revisión Alembic 0004_correlated_sessions aplicada y en head;
+- quince scripts PowerShell sin errores de sintaxis;
 - parser y migraciones Python válidos dentro del contenedor no-root;
 - artefactos y evidencia de instalación desde clon limpio presentes;
 - repositorio main sincronizado con origin/main antes de esta fase;
@@ -242,7 +242,11 @@ La validación operativa más reciente confirmó:
 - caída de Elasticsearch recuperada sobre el mismo pipeline_run;
 - Fase 12 validada desde clon limpio con fallos controlados;
 - modelo de sesiones Fase 13.1 contrastado con 292 sesiones reales:
-  290 completas y 2 incompletas.
+  290 completas y 2 incompletas;
+- proyección final de Fase 13 validada con 308 sesiones:
+  306 completas y 2 incompletas.
+- Fase 13 reproducida desde clon limpio con 108 eventos, 16 sesiones,
+  transición open a complete e idempotencia confirmadas.
 ```
 
 Se verificaron los ocho servicios persistentes del perfil LAB en ejecución:
@@ -334,16 +338,16 @@ Estado acumulado de la validación más reciente:
 
 ```text
 PostgreSQL:
-- 1710 eventos
-- 1710 event_hash únicos
-- 292 sesiones
-- 46 ejecuciones en pipeline_runs
-- último run_id: 78
-- último evento: 2026-06-25 08:26:54.546529
+- 1818 eventos
+- 1818 event_hash únicos
+- 308 sesiones
+- 51 ejecuciones en pipeline_runs
+- último run_id: 83
+- último evento: 2026-06-25 12:08:36.58022
 - 1 evento inválido en cuarentena
 
 Elasticsearch:
-- 1710 documentos en cowrie-events
+- 1818 documentos en cowrie-events
 
 n8n:
 - versión efectiva 2.15.0
@@ -354,7 +358,7 @@ pipeline-worker:
 - contrato 1.0
 - servicio privado sin puerto publicado
 - ejecución concurrente protegida por lock
-- checkpoint en byte 356525 y línea 637
+- checkpoint en byte 416383
 
 Kibana:
 - estado general available
@@ -372,6 +376,7 @@ docs/evidencias/fase10_orquestacion_n8n.md
 docs/evidencias/fase11_checkpoint_incremental.md
 docs/evidencias/fase12_trazabilidad_recuperacion.md
 docs/evidencias/fase13_1_diseno_sesiones.md
+docs/evidencias/fase13_sesiones_correlacionadas.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -721,17 +726,17 @@ Objetivo: hacer observable y resistente la orquestación.
 Objetivo: construir la unidad analítica principal del sistema.
 
 - [x] Diseñar la entidad, tabla o vista de sesiones.
-- [ ] Agrupar eventos por `session_id`.
-- [ ] Calcular inicio, fin, duración y resumen de actividad.
-- [ ] Crear la migración y validar sesiones completas e incompletas.
+- [x] Agrupar eventos por `session_id`.
+- [x] Calcular inicio, fin, duración y resumen de actividad.
+- [x] Crear la migración y validar sesiones completas e incompletas.
 
 ### Subfases
 
 ```text
 [x] Fase 13.1 - Diseño del modelo de sesión
-[ ] Fase 13.2 - Agrupación y proyección
-[ ] Fase 13.3 - Tiempos y resumen de actividad
-[ ] Fase 13.4 - Migración, backfill y validación
+[x] Fase 13.2 - Agrupación y proyección
+[x] Fase 13.3 - Tiempos y resumen de actividad
+[x] Fase 13.4 - Migración, backfill y validación
 ```
 
 ### Resultado de Fase 13.1
@@ -742,6 +747,12 @@ Objetivo: construir la unidad analítica principal del sistema.
 [x] estados complete, open e incomplete definidos
 [x] campos, índices e invariantes documentados
 [x] diseño contrastado con 292 sesiones reales
+[x] migración 0004 y backfill aplicados
+[x] upsert incremental integrado al pipeline
+[x] transición open a complete validada
+[x] 308 sesiones correlacionadas sin inconsistencias
+[x] clon limpio: 108 eventos, 16 sesiones y 0 duplicados
+[x] escritura sintética NDJSON corregida a UTF-8 sin BOM
 ```
 
 ## Fase 14 — Reglas versionadas de Attack Risk Score

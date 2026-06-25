@@ -56,6 +56,111 @@ VALUES (
 ON CONFLICT (event_hash) DO NOTHING
 """
 
+SESSION_UPSERT_SQL = """
+WITH targets(sensor, session_id) AS (
+    SELECT * FROM UNNEST(%s::text[], %s::text[])
+),
+aggregated AS (
+    SELECT
+        COALESCE(e.sensor, 'unknown') || ':' || e.session_id AS session_key,
+        e.session_id,
+        COALESCE(e.sensor, 'unknown') AS sensor,
+        (ARRAY_AGG(e.src_ip ORDER BY e.timestamp_evento, e.id)
+            FILTER (WHERE e.src_ip IS NOT NULL))[1] AS src_ip,
+        (ARRAY_AGG(e.src_port ORDER BY e.timestamp_evento, e.id)
+            FILTER (WHERE e.src_port IS NOT NULL))[1] AS src_port,
+        MIN(e.timestamp_evento) AS first_event_at,
+        MAX(e.timestamp_evento) AS last_event_at,
+        MIN(e.timestamp_evento) FILTER (
+            WHERE e.eventid = 'cowrie.session.connect'
+        ) AS connected_at,
+        MAX(e.timestamp_evento) FILTER (
+            WHERE e.eventid = 'cowrie.session.closed'
+        ) AS closed_at,
+        CASE
+            WHEN BOOL_OR(e.eventid = 'cowrie.session.connect')
+            AND BOOL_OR(e.eventid = 'cowrie.session.closed')
+            THEN GREATEST(
+                EXTRACT(EPOCH FROM (
+                    MAX(e.timestamp_evento) FILTER (
+                        WHERE e.eventid = 'cowrie.session.closed'
+                    )
+                    - MIN(e.timestamp_evento) FILTER (
+                        WHERE e.eventid = 'cowrie.session.connect'
+                    )
+                )),
+                0
+            )
+            ELSE NULL
+        END AS duration_seconds,
+        CASE
+            WHEN BOOL_OR(e.eventid = 'cowrie.session.connect')
+            AND BOOL_OR(e.eventid = 'cowrie.session.closed')
+            THEN 'complete'
+            WHEN BOOL_OR(e.eventid = 'cowrie.session.connect')
+            THEN 'open'
+            ELSE 'incomplete'
+        END AS lifecycle_status,
+        COUNT(*)::integer AS event_count,
+        COUNT(*) FILTER (
+            WHERE e.eventid = 'cowrie.login.success'
+        )::integer AS login_success_count,
+        COUNT(*) FILTER (
+            WHERE e.eventid = 'cowrie.login.failed'
+        )::integer AS login_failed_count,
+        COUNT(*) FILTER (
+            WHERE e.eventid = 'cowrie.command.input'
+        )::integer AS command_count,
+        COUNT(*) FILTER (
+            WHERE e.eventid = 'cowrie.command.failed'
+        )::integer AS command_failed_count,
+        COUNT(*) FILTER (
+            WHERE e.eventid = 'cowrie.session.file_download'
+        )::integer AS download_count,
+        (ARRAY_AGG(e.username ORDER BY e.timestamp_evento, e.id)
+            FILTER (WHERE e.username IS NOT NULL))[1] AS first_username,
+        (ARRAY_AGG(e.username ORDER BY e.timestamp_evento DESC, e.id DESC)
+            FILTER (WHERE e.username IS NOT NULL))[1] AS last_username,
+        BOOL_OR(e.eventid = 'cowrie.login.success') AS has_successful_login,
+        BOOL_OR(e.eventid = 'cowrie.session.file_download') AS has_download
+    FROM eventos e
+    JOIN targets t
+      ON t.sensor = COALESCE(e.sensor, 'unknown')
+     AND t.session_id = e.session_id
+    GROUP BY COALESCE(e.sensor, 'unknown'), e.session_id
+)
+INSERT INTO sessions (
+    session_key, session_id, sensor, src_ip, src_port,
+    first_event_at, last_event_at, connected_at, closed_at,
+    duration_seconds, lifecycle_status, event_count,
+    login_success_count, login_failed_count, command_count,
+    command_failed_count, download_count, first_username,
+    last_username, has_successful_login, has_download
+)
+SELECT * FROM aggregated
+ON CONFLICT (session_key) DO UPDATE
+SET
+    src_ip = EXCLUDED.src_ip,
+    src_port = EXCLUDED.src_port,
+    first_event_at = EXCLUDED.first_event_at,
+    last_event_at = EXCLUDED.last_event_at,
+    connected_at = EXCLUDED.connected_at,
+    closed_at = EXCLUDED.closed_at,
+    duration_seconds = EXCLUDED.duration_seconds,
+    lifecycle_status = EXCLUDED.lifecycle_status,
+    event_count = EXCLUDED.event_count,
+    login_success_count = EXCLUDED.login_success_count,
+    login_failed_count = EXCLUDED.login_failed_count,
+    command_count = EXCLUDED.command_count,
+    command_failed_count = EXCLUDED.command_failed_count,
+    download_count = EXCLUDED.download_count,
+    first_username = EXCLUDED.first_username,
+    last_username = EXCLUDED.last_username,
+    has_successful_login = EXCLUDED.has_successful_login,
+    has_download = EXCLUDED.has_download,
+    updated_at = NOW()
+"""
+
 FINGERPRINT_BYTES = 4096
 ELASTICSEARCH_MAX_ATTEMPTS = 3
 RETRY_DELAY_SECONDS = 1
@@ -455,6 +560,30 @@ def insert_events(
         after = int(cursor.fetchone()[0])
     connection.commit()
     return after - before
+
+
+def refresh_sessions(
+    connection: psycopg.Connection[Any],
+    events: list[dict[str, Any]],
+) -> int:
+    session_pairs = sorted(
+        {
+            (
+                str(event.get("sensor") or "unknown"),
+                str(event["session_id"]),
+            )
+            for event in events
+            if event.get("session_id")
+        }
+    )
+    if not session_pairs:
+        return 0
+    sensors = [pair[0] for pair in session_pairs]
+    session_ids = [pair[1] for pair in session_pairs]
+    with connection.cursor() as cursor:
+        cursor.execute(SESSION_UPSERT_SQL, (sensors, session_ids))
+    connection.commit()
+    return len(session_pairs)
 
 
 def create_pipeline_run(
@@ -872,6 +1001,7 @@ def execute_pipeline(
         try:
             if events:
                 inserted = insert_events(connection, events)
+                refresh_sessions(connection, events)
                 indexed = index_events(
                     elasticsearch_url,
                     elasticsearch_index,

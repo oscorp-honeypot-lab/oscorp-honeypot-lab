@@ -11,5 +11,6 @@ Write-Host "[smoke] Preparando LAB..."
 
 Write-Host "[smoke] Ejecutando demo integral..."
 & "$PSScriptRoot\run_demo.ps1"
+& "$PSScriptRoot\validate_sessions.ps1" -CheckOnly
 
 Write-Host "[smoke] Prueba integral superada."
