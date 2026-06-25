@@ -8,6 +8,7 @@ $Services = @(
     "kibana",
     "n8n",
     "pipeline-worker",
+    "backend",
     "cowrie",
     "payload-server",
     "attacker-sim"
@@ -76,6 +77,19 @@ $worker = ($workerHealth -join "`n") | ConvertFrom-Json
 if ($worker.status -ne "ok" -or $worker.contract_version -ne "1.0") {
     throw "pipeline-worker no está saludable."
 }
+
+Write-Host "[validate] Verificando backend..."
+$backendLive = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/health/live" -TimeoutSec 15
+$backendReady = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/health/ready" -TimeoutSec 15
+if ($backendLive.status -ne "ok" -or $backendReady.status -ne "ok") {
+    throw "El backend FastAPI no está saludable."
+}
+$openapi = Invoke-RestMethod -Uri "http://localhost:8000/openapi.json" -TimeoutSec 15
+if ($openapi.info.title -ne "OSCORP ThreatLab API") {
+    throw "El contrato OpenAPI del backend es inesperado."
+}
+& docker compose exec -T backend pytest -q -p no:cacheprovider
+Assert-LastExitCode "Las pruebas del backend no fueron superadas."
 
 Write-Host "[validate] Verificando pruebas Python..."
 & docker compose exec -T pipeline-worker python -m unittest discover -s /app/tests -v

@@ -200,13 +200,13 @@ Payloads offline:                           Implementados y validados
 Smoke test LAB:                             Implementado y superado
 Workflow n8n:                               Orquestación punta a punta implementada en Fase 10
 Kibana:                                     Servicio disponible; dashboards pendientes
-Aplicación web propia:                      No implementada
+Aplicación web propia:                      Backend base implementado; frontend pendiente
 Attack Risk Score:                          Implementado, persistido y validado en Fase 15
 Alertas Telegram y MTTD real:               No implementados en la reestructuración
 VirusTotal e ip-api:                        No implementados en la reestructuración
 Reportes automáticos:                       No implementados
 Modo REAL/VPS:                              Diseñado, no validado
-Pruebas automatizadas/CI:                   No implementadas
+Pruebas automatizadas/CI:                   Pruebas backend y pipeline integradas; CI pendiente
 Actualización final de la tesis:            Pendiente hasta finalizar el sistema
 ```
 
@@ -217,9 +217,9 @@ Actualización final de la tesis:            Pendiente hasta finalizar el sistem
 La validación operativa más reciente confirmó:
 
 ```text
-- ocho servicios persistentes del perfil LAB operativos;
+- nueve servicios persistentes del perfil LAB operativos;
 - configuración Docker Compose válida;
-- PostgreSQL y Elasticsearch sincronizados en 1924 registros;
+- PostgreSQL y Elasticsearch sincronizados en 2030 registros;
 - revisión Alembic 0005_session_risk_scores aplicada y en head;
 - diecisiete scripts PowerShell sin errores de sintaxis;
 - parser y migraciones Python válidos dentro del contenedor no-root;
@@ -257,9 +257,15 @@ La validación operativa más reciente confirmó:
 - smoke incremental de Fase 15: 106 eventos, 15 sesiones nuevas y 0 duplicados.
 - Fase 15 reproducida desde clon limpio y base vacía con 20 pruebas,
   105 eventos, 15 scores, recálculo e idempotencia.
+- backend FastAPI de Fase 16 saludable como contenedor no-root;
+- health live/ready, PostgreSQL async, OpenAPI y logs JSON verificados;
+- 3 pruebas backend y 20 pruebas pipeline superadas;
+- smoke de Fase 16 finalizado con 2030 eventos y 338 sesiones/scores.
+- Fase 16 reproducida desde clon limpio con backend saludable, 3 pruebas,
+  smoke de 106 eventos, 15 sesiones/scores e idempotencia.
 ```
 
-Se verificaron los ocho servicios persistentes del perfil LAB en ejecución:
+Se verificaron los nueve servicios persistentes del perfil LAB en ejecución:
 
 ```text
 oscorp_cowrie
@@ -270,6 +276,7 @@ oscorp_kibana
 oscorp_n8n
 oscorp_pipeline_worker
 oscorp_payload_server
+oscorp_backend
 ```
 
 El servicio transitorio `migrate` completó Alembic correctamente antes de iniciar los consumidores.
@@ -283,6 +290,7 @@ Kibana:        available
 n8n:           versión efectiva 2.15.0
 Cowrie:        accesible desde attacker-sim en cowrie:2222
 Payloads:      accesibles únicamente dentro de la red LAB
+Backend:       FastAPI disponible en http://localhost:8000
 ```
 
 Se ejecutó el smoke test completo:
@@ -348,16 +356,16 @@ Estado acumulado de la validación más reciente:
 
 ```text
 PostgreSQL:
-- 1924 eventos
-- 1924 event_hash únicos
-- 323 sesiones
-- 54 ejecuciones en pipeline_runs
-- último run_id: 86
-- último evento: 2026-06-25 12:34:14.35441
+- 2030 eventos
+- 2030 event_hash únicos
+- 338 sesiones
+- 57 ejecuciones en pipeline_runs
+- último run_id: 89
+- último evento: 2026-06-25 16:13:58.166943
 - 1 evento inválido en cuarentena
 
 Elasticsearch:
-- 1924 documentos en cowrie-events
+- 2030 documentos en cowrie-events
 
 n8n:
 - versión efectiva 2.15.0
@@ -368,7 +376,7 @@ pipeline-worker:
 - contrato 1.0
 - servicio privado sin puerto publicado
 - ejecución concurrente protegida por lock
-- checkpoint en byte 475887 y línea 851
+- checkpoint en byte 535391 y línea 957
 
 Kibana:
 - estado general available
@@ -389,6 +397,7 @@ docs/evidencias/fase13_1_diseno_sesiones.md
 docs/evidencias/fase13_sesiones_correlacionadas.md
 docs/evidencias/fase14_reglas_risk_score.md
 docs/evidencias/fase15_calculo_persistencia_risk_score.md
+docs/evidencias/fase16_base_api.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -820,10 +829,22 @@ Objetivo: aplicar el score a sesiones reales de forma auditable.
 
 Objetivo: crear el backend de OSCORP ThreatLab con límites claros.
 
-- [ ] Crear el servicio FastAPI con Python 3.12, Pydantic v2 y configuración tipada.
-- [ ] Aplicar un monolito modular con `domain`, `application`, `adapters`, `infrastructure` y `api`.
-- [ ] Configurar SQLAlchemy 2 asíncrono, psycopg 3 y una única cadena de migraciones Alembic.
-- [ ] Contenerizar el backend y exponer healthcheck, logs estructurados y OpenAPI.
+- [x] Crear el servicio FastAPI con Python 3.12, Pydantic v2 y configuración tipada.
+- [x] Aplicar un monolito modular con `domain`, `application`, `adapters`, `infrastructure` y `api`.
+- [x] Configurar SQLAlchemy 2 asíncrono, psycopg 3 y una única cadena de migraciones Alembic.
+- [x] Contenerizar el backend y exponer healthcheck, logs estructurados y OpenAPI.
+
+### Resultado
+
+```text
+[x] backend FastAPI 0.138.1 en Python 3.12.4
+[x] health live/ready con dependencia PostgreSQL
+[x] OpenAPI y Swagger UI disponibles
+[x] logs JSON y x-request-id
+[x] contenedor no-root UID 10002
+[x] 3 pruebas backend y smoke integral superados
+[x] clon limpio con 106 eventos, 15 sesiones/scores y 0 duplicados
+```
 
 ## Fase 17 — Identidad y seguridad de la aplicación
 

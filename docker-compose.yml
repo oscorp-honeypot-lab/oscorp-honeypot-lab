@@ -226,6 +226,41 @@ services:
       - lab
       - real
 
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: oscorp/backend:phase16
+    pull_policy: never
+    container_name: oscorp_backend
+    restart: unless-stopped
+    environment:
+      OSCORP_API_ENVIRONMENT: ${OSCORP_API_ENVIRONMENT:-lab}
+      OSCORP_API_LOG_LEVEL: ${OSCORP_API_LOG_LEVEL:-INFO}
+      OSCORP_API_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-oscorp}:${POSTGRES_PASSWORD:-oscorp123}@postgres:5432/${POSTGRES_DB:-oscorp}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "from urllib.request import urlopen; urlopen('http://localhost:8000/api/v1/health/ready', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - oscorp_net
+    profiles:
+      - lab
+      - real
+
   pipeline-worker:
     build:
       context: .

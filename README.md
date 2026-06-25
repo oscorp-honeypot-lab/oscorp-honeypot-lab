@@ -33,6 +33,7 @@ n8n:           http://localhost:5678
 PostgreSQL:    localhost:5433
 Elasticsearch: http://localhost:9200
 Kibana:        http://localhost:5601
+Backend API:   http://localhost:8000/docs
 pipeline-worker: interno, sin puerto publicado
 ```
 
@@ -125,6 +126,7 @@ scripts/recalculate_risk_scores.ps1
 scripts/validate_risk_scores.ps1
 n8n/workflows/oscorp-workflow.json
 pipeline/contracts/
+backend/
 docs/evidencias/
 ESTADO_Y_ROADMAP.md
 ```
