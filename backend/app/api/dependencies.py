@@ -11,6 +11,7 @@ from app.application.auth_service import (
     CsrfFailed,
 )
 from app.application.analytics_service import AnalyticsService
+from app.application.export_service import ExportService
 from app.application.health_service import HealthService
 from app.domain.identity import Role, UserIdentity
 
@@ -25,6 +26,10 @@ def get_auth_service(request: Request) -> AuthService:
 
 def get_analytics_service(request: Request) -> AnalyticsService:
     return request.app.state.analytics_service
+
+
+def get_export_service(request: Request) -> ExportService:
+    return request.app.state.export_service
 
 
 def client_ip(request: Request) -> str:

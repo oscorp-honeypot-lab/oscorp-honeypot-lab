@@ -22,6 +22,7 @@ from app.api.middleware.security import CsrfMiddleware, SecurityHeadersMiddlewar
 from app.api.v1.router import api_router
 from app.application.auth_service import AuthService
 from app.application.analytics_service import AnalyticsService
+from app.application.export_service import ExportService
 from app.application.health_service import HealthService
 from app.infrastructure.config import get_settings
 from app.infrastructure.database import create_engine, create_session_factory
@@ -52,8 +53,13 @@ async def lifespan(app: FastAPI):
         login_window_minutes=settings.login_window_minutes,
         login_max_failures=settings.login_max_failures,
     )
+    analytics_repository = PostgresAnalyticsRepository(session_factory)
     app.state.analytics_service = AnalyticsService(
-        PostgresAnalyticsRepository(session_factory),
+        analytics_repository,
+        rules_version="1.0.0",
+    )
+    app.state.export_service = ExportService(
+        analytics_repository,
         rules_version="1.0.0",
     )
     app.state.settings = settings

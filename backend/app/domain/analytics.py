@@ -117,3 +117,14 @@ class SessionDetail:
     commands: tuple[str, ...]
     downloads: tuple[DownloadItem, ...]
     events: tuple[EventListItem, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ExportArtifact:
+    export_id: UUID
+    filename: str
+    content: bytes
+    row_count: int
+    total_rows: int
+    page: int
+    page_size: int

@@ -17,3 +17,5 @@ def test_openapi_exposes_versioned_health_contract() -> None:
     assert "/api/v1/events" in document["paths"]
     assert "/api/v1/sessions/{session_key}" in document["paths"]
     assert "/api/v1/sessions/{session_key}/review" in document["paths"]
+    assert "/api/v1/exports/sessions.csv" in document["paths"]
+    assert "/api/v1/exports/events.csv" in document["paths"]

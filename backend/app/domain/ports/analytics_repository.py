@@ -50,3 +50,30 @@ class AnalyticsRepository(Protocol):
         client_ip: str,
         user_agent: str,
     ) -> SessionListItem | None: ...
+
+    async def start_export(
+        self,
+        *,
+        user_id: UUID,
+        resource: str,
+        page: int,
+        page_size: int,
+        filters: dict[str, object],
+        encoding: str,
+    ) -> UUID: ...
+
+    async def complete_export(
+        self,
+        *,
+        export_id: UUID,
+        row_count: int,
+        total_rows: int,
+        filename: str,
+    ) -> None: ...
+
+    async def fail_export(
+        self,
+        *,
+        export_id: UUID,
+        error_code: str,
+    ) -> None: ...

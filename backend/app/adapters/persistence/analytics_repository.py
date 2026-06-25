@@ -531,3 +531,101 @@ class PostgresAnalyticsRepository:
                 },
             )
             return self._session_item(result.one())
+
+    async def start_export(
+        self,
+        *,
+        user_id: UUID,
+        resource: str,
+        page: int,
+        page_size: int,
+        filters: dict[str, object],
+        encoding: str,
+    ) -> UUID:
+        async with self._session_factory.begin() as session:
+            result = await session.execute(
+                text(
+                    """
+                    INSERT INTO app_export_runs (
+                        user_id,
+                        resource,
+                        status,
+                        page,
+                        page_size,
+                        filters,
+                        encoding
+                    )
+                    VALUES (
+                        :user_id,
+                        :resource,
+                        'running',
+                        :page,
+                        :page_size,
+                        CAST(:filters AS jsonb),
+                        :encoding
+                    )
+                    RETURNING id
+                    """
+                ),
+                {
+                    "user_id": user_id,
+                    "resource": resource,
+                    "page": page,
+                    "page_size": page_size,
+                    "filters": json.dumps(filters, separators=(",", ":")),
+                    "encoding": encoding,
+                },
+            )
+            return result.scalar_one()
+
+    async def complete_export(
+        self,
+        *,
+        export_id: UUID,
+        row_count: int,
+        total_rows: int,
+        filename: str,
+    ) -> None:
+        async with self._session_factory.begin() as session:
+            await session.execute(
+                text(
+                    """
+                    UPDATE app_export_runs
+                    SET status = 'completed',
+                        row_count = :row_count,
+                        total_rows = :total_rows,
+                        filename = :filename,
+                        finished_at = NOW()
+                    WHERE id = :export_id
+                    """
+                ),
+                {
+                    "export_id": export_id,
+                    "row_count": row_count,
+                    "total_rows": total_rows,
+                    "filename": filename,
+                },
+            )
+
+    async def fail_export(
+        self,
+        *,
+        export_id: UUID,
+        error_code: str,
+    ) -> None:
+        async with self._session_factory.begin() as session:
+            await session.execute(
+                text(
+                    """
+                    UPDATE app_export_runs
+                    SET status = 'failed',
+                        error_code = :error_code,
+                        finished_at = NOW()
+                    WHERE id = :export_id
+                    """
+                ),
+                {
+                    "export_id": export_id,
+                    "error_code": error_code[:128],
+                },
+            )

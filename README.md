@@ -59,6 +59,8 @@ GET  /api/v1/sessions
 GET  /api/v1/sessions/{session_key}
 PATCH /api/v1/sessions/{session_key}/review
 GET  /api/v1/events
+GET  /api/v1/exports/sessions.csv
+GET  /api/v1/exports/events.csv
 ```
 
 Las lecturas analíticas requieren una sesión autenticada. Los listados usan
@@ -69,6 +71,11 @@ Sesiones y eventos aceptan filtros combinables por `from`, `to`, `src_ip`,
 `country`, `username` y `event_type`. Las sesiones también permiten
 `risk_level` y `reviewed`. Marcar una sesión como revisada requiere rol
 `analyst` o `admin` y token CSRF.
+
+Las exportaciones CSV reutilizan los mismos filtros, permiten `page` y
+`page_size` hasta 1000 filas por archivo, e informan el total disponible en
+cabeceras `X-Export-*`. Se generan como UTF-8 con BOM y no incluyen
+contraseñas ni eventos crudos.
 
 ## Generar eventos de ataque
 

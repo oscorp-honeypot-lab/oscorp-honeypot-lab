@@ -220,7 +220,7 @@ La validación operativa más reciente confirmó:
 - nueve servicios persistentes del perfil LAB operativos;
 - configuración Docker Compose válida;
 - PostgreSQL y Elasticsearch sincronizados en 2136 registros;
-- revisión Alembic 0007_session_review aplicada y en head;
+- revisión Alembic 0008_export_runs aplicada y en head;
 - diecisiete scripts PowerShell sin errores de sintaxis;
 - parser y migraciones Python válidos dentro del contenedor no-root;
 - artefactos y evidencia de instalación desde clon limpio presentes;
@@ -284,6 +284,16 @@ La validación operativa más reciente confirmó:
 - 17 pruebas backend y 20 pruebas pipeline superadas;
 - smoke de Fase 19 finalizado con 2346 eventos, 383 sesiones/scores
   y segunda ingesta en cero.
+- exportaciones CSV de sesiones y eventos implementadas en Fase 20;
+- límite paginado, UTF-8 con BOM y protección de fórmulas verificados;
+- metadatos de éxito y error persistidos en app_export_runs;
+- 20 pruebas backend y 20 pruebas pipeline superadas;
+- smoke de Fase 20 finalizado con 2451 eventos, 398 sesiones/scores
+  y segunda ingesta en cero.
+- Fases 19 y 20 reproducidas conjuntamente desde clon limpio y base vacía;
+- migración 0008 en head, 20 pruebas backend y 20 pruebas pipeline;
+- filtros, revisión, CSV, metadatos, 105 eventos, 15 sesiones/scores
+  e idempotencia confirmados.
 ```
 
 Se verificaron los nueve servicios persistentes del perfil LAB en ejecución:
@@ -377,15 +387,15 @@ Estado acumulado de la validación más reciente:
 
 ```text
 PostgreSQL:
-- 2346 eventos
-- 2346 event_hash únicos
-- 383 sesiones
-- 66 ejecuciones en pipeline_runs
-- último run_id: 98
+- 2451 eventos
+- 2451 event_hash únicos
+- 398 sesiones
+- 69 ejecuciones en pipeline_runs
+- último run_id: 101
 - 1 evento inválido en cuarentena
 
 Elasticsearch:
-- 2346 documentos en cowrie-events
+- 2451 documentos en cowrie-events
 
 n8n:
 - versión efectiva 2.15.0
@@ -396,7 +406,7 @@ pipeline-worker:
 - contrato 1.0
 - servicio privado sin puerto publicado
 - ejecución concurrente protegida por lock
-- checkpoint en byte 713301, línea 1273
+- checkpoint en byte 772500, línea 1378
 
 Kibana:
 - estado general available
@@ -421,6 +431,7 @@ docs/evidencias/fase16_base_api.md
 docs/evidencias/fase17_identidad_seguridad.md
 docs/evidencias/fase18_api_consulta_analitica.md
 docs/evidencias/fase19_filtros_revision.md
+docs/evidencias/fase20_exportacion_csv.md
 docs/arquitectura-aplicacion-web-plan.md
 ```
 
@@ -931,17 +942,29 @@ Objetivo: soportar el trabajo de análisis sobre las sesiones.
 [x] revisión protegida por rol analyst y CSRF
 [x] actor, fecha y auditoría de transiciones
 [x] 17 pruebas backend, 20 pruebas pipeline y smoke integral
-[ ] clon limpio diferido a Fase 20 para validar ambas fases juntas
+[x] clon limpio conjunto con Fase 20: filtros y revisión verificados
 ```
 
 ## Fase 20 — API de exportación
 
 Objetivo: permitir extraer datos sin depender de Kibana.
 
-- [ ] Exportar sesiones y eventos filtrados a CSV.
-- [ ] Definir límites y paginación para exportaciones grandes.
-- [ ] Registrar errores y metadatos de la exportación.
-- [ ] Agregar pruebas de contenido y codificación.
+- [x] Exportar sesiones y eventos filtrados a CSV.
+- [x] Definir límites y paginación para exportaciones grandes.
+- [x] Registrar errores y metadatos de la exportación.
+- [x] Agregar pruebas de contenido y codificación.
+
+### Resultado
+
+```text
+[x] migración 0008_export_runs
+[x] CSV filtrado de sesiones y eventos
+[x] máximo 1000 filas por página y totales en cabeceras
+[x] UTF-8 con BOM, CRLF y neutralización de fórmulas
+[x] metadatos persistidos para éxito y error
+[x] 20 pruebas backend, 20 pruebas pipeline y smoke integral
+[x] clon limpio conjunto: 20 pruebas backend, 105 eventos y 0 duplicados
+```
 
 ## Fase 21 — Base React y dashboard operativo
 

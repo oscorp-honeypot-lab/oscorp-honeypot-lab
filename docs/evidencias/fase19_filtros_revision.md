@@ -69,5 +69,21 @@ pipeline_runs: 66
 checkpoint: byte 713301, línea 1273
 ```
 
-El clon limpio se difiere hasta cerrar la Fase 20, cuando se validarán
-conjuntamente las implementaciones de las Fases 19 y 20.
+## Validación conjunta desde clon limpio
+
+La validación se ejecutó al cerrar la Fase 20, como prueba conjunta de ambas
+implementaciones:
+
+```text
+commit candidato: 39dde61
+estado inicial: sin .env y con volúmenes Docker vacíos
+migraciones: 0007_session_review y 0008_export_runs
+pruebas backend: 20/20
+pruebas pipeline: 20/20
+filtros combinados: superados
+revisión por roles y auditoría: superadas
+eventos: 105
+sesiones / scores: 15 / 15
+segunda ingesta: 0 eventos
+resultado: smoke integral superado
+```

@@ -27,6 +27,22 @@ def cleanup_test_data() -> None:
     with psycopg.connect(database_dsn()) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
+                """
+                DELETE FROM app_export_runs
+                WHERE filters ->> 'src_ip' = '203.0.113.18'
+                """
+            )
+            cursor.execute(
+                """
+                DELETE FROM app_export_runs
+                WHERE user_id IN (
+                    SELECT id
+                    FROM app_users
+                    WHERE username LIKE 'test_analytics_%'
+                )
+                """
+            )
+            cursor.execute(
                 "DELETE FROM eventos WHERE sensor = %s",
                 (SENSOR,),
             )
@@ -427,3 +443,67 @@ def test_session_detail_contains_analysis_without_secrets(
         missing = client.get("/api/v1/sessions/missing-session")
         assert missing.status_code == 404
         assert missing.json()["detail"] == "session_not_found"
+
+
+def test_csv_exports_content_encoding_and_metadata(
+    analytics_session: dict[str, object],
+) -> None:
+    with TestClient(app) as client:
+        login(client)
+        sessions = client.get(
+            "/api/v1/exports/sessions.csv"
+            "?src_ip=203.0.113.18"
+            "&country=argentina"
+            "&risk_level=high"
+            "&page=1"
+            "&page_size=1"
+        )
+        assert sessions.status_code == 200
+        assert sessions.content.startswith(b"\xef\xbb\xbf")
+        sessions_text = sessions.content.decode("utf-8-sig")
+        assert "session_key,session_id,sensor" in sessions_text
+        assert str(analytics_session["session_key"]) in sessions_text
+        assert "Argentina" in sessions_text
+        assert sessions.headers["x-export-row-count"] == "1"
+        assert sessions.headers["x-export-page-size"] == "1"
+        assert sessions.headers["x-export-encoding"] == "utf-8-sig"
+        assert "attachment;" in sessions.headers["content-disposition"]
+
+        events = client.get(
+            "/api/v1/exports/events.csv"
+            "?src_ip=203.0.113.18"
+            "&event_type=cowrie.command.input"
+            "&page_size=1"
+        )
+        assert events.status_code == 200
+        assert events.content.startswith(b"\xef\xbb\xbf")
+        events_text = events.content.decode("utf-8-sig")
+        assert "id,timestamp,event_type" in events_text
+        assert "whoami" in events_text
+        assert "must-not-leak" not in events_text
+
+        assert client.get(
+            "/api/v1/exports/events.csv?page_size=1001"
+        ).status_code == 422
+
+        export_ids = (
+            sessions.headers["x-export-id"],
+            events.headers["x-export-id"],
+        )
+    with psycopg.connect(database_dsn()) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT resource, status, row_count, encoding, filters
+                FROM app_export_runs
+                WHERE id = ANY(%s::uuid[])
+                ORDER BY resource
+                """,
+                (list(export_ids),),
+            )
+            rows = cursor.fetchall()
+    assert len(rows) == 2
+    assert all(row[1] == "completed" for row in rows)
+    assert all(row[2] == 1 for row in rows)
+    assert all(row[3] == "utf-8-sig" for row in rows)
+    assert any(row[4].get("country") == "argentina" for row in rows)
