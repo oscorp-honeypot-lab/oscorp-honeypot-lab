@@ -202,8 +202,9 @@ Workflow n8n:                               Orquestación punta a punta implemen
 Kibana:                                     Servicio disponible; dashboards pendientes
 Aplicación web propia:                      Dashboard, sesiones y detalle interactivo operativos
 Attack Risk Score:                          Implementado, persistido y validado en Fase 15
-Modelo de alertas (criterios + tabla):       Implementado en Fase 23 (pending; envío en Fase 24)
-Alertas Telegram y MTTD real:               No implementados en la reestructuración
+Modelo de alertas (criterios + tabla):       Implementado en Fase 23
+Entrega de alertas Telegram:                Implementada en Fase 24 (configurable via env vars)
+MTTD real:                                  Parcial — sent_at y mttd_seconds en alerts; API en Fase 25
 VirusTotal e ip-api:                        No implementados en la reestructuración
 Reportes automáticos:                       No implementados
 Modo REAL/VPS:                              Diseñado, no validado
@@ -319,6 +320,11 @@ La validación operativa más reciente confirmó:
 - constraint UNIQUE(session_key, trigger) verificada (0 duplicados en re-run);
 - 9 pruebas pipeline + 5 unit + 4 integration backend superadas;
 - 30 pruebas backend y 29 pruebas pipeline superadas.
+- Fase 24 completada: entrega de alertas por Telegram con adaptador configurable,
+  reintentos controlados (max 3), mttd_seconds calculado al enviar;
+- operación silenciosa cuando TELEGRAM_BOT_TOKEN/CHAT_ID no están configurados;
+- flujo validado: 12 alertas sent con mock, retry → failed verificado end-to-end;
+- 22 pruebas nuevas (15 telegram + 7 dispatcher) → 51 pipeline totales.
 ```
 
 Se verificaron los diez servicios persistentes del perfil LAB en ejecución:
@@ -1093,10 +1099,19 @@ Evidencia: docs/evidencias/fase23_modelo_alertas.md
 
 Objetivo: enviar alertas y registrar su resultado real.
 
-- [ ] Integrar Telegram mediante un adaptador configurable.
-- [ ] Gestionar token y destino sin versionar secretos.
-- [ ] Registrar envíos exitosos y fallidos.
-- [ ] Agregar reintentos controlados y pruebas.
+```text
+[x] Integrar Telegram mediante TelegramAdapter configurable (urllib.request, sin deps nuevas).
+[x] Gestionar token y destino sin versionar secretos: ${TELEGRAM_BOT_TOKEN:-} en docker-compose.yml.
+[x] Operación silenciosa cuando las variables no están configuradas (dispatch retorna 0).
+[x] Registrar envíos exitosos: status=sent, sent_at, mttd_seconds calculado.
+[x] Registrar fallos: attempt_count++, error_code, error_detail; status=failed al agotar intentos.
+[x] Reintentos controlados: MAX_ATTEMPTS=3, carga solo pending con attempt_count < max.
+[x] Migración 0010_alert_attempt_count agrega attempt_count INTEGER NOT NULL DEFAULT 0.
+[x] format_alert_message() con HTML (negritas, code) y emojis de nivel de riesgo.
+[x] 22 pruebas nuevas: 15 telegram + 7 dispatcher → 51 pruebas pipeline totales.
+[x] Flujo validado con mock adapter: 12 alertas sent, mttd=4209s; retry → failed verificado.
+Evidencia: docs/evidencias/fase24_telegram_alertas.md
+```
 
 ## Fase 25 — Medición real de MTTD
 

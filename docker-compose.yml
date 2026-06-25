@@ -312,6 +312,8 @@ services:
       COWRIE_LOG_PATH: /files/cowrie/cowrie.json
       PIPELINE_WORKER_HOST: 0.0.0.0
       PIPELINE_WORKER_PORT: 8080
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     volumes:
       - ./cowrie/logs:/files/cowrie:ro
     depends_on:

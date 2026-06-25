@@ -19,7 +19,9 @@ from urllib.error import HTTPError, URLError
 import psycopg
 from psycopg.types.json import Jsonb
 
+from alerts.dispatcher import dispatch_pending_alerts
 from alerts.storage import generate_session_alerts
+from alerts.telegram import TelegramAdapter
 from risk.storage import recalculate_scores
 
 
@@ -1007,6 +1009,7 @@ def execute_pipeline(
                 session_keys = refresh_sessions(connection, events)
                 recalculate_scores(connection, session_keys)
                 generate_session_alerts(connection, session_keys, run_id)
+                dispatch_pending_alerts(connection, TelegramAdapter.from_env())
                 indexed = index_events(
                     elasticsearch_url,
                     elasticsearch_index,
