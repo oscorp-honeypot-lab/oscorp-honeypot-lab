@@ -55,21 +55,45 @@ def _fmt(value: object) -> str:
     return str(value)
 
 
+_SECTION_H2 = (
+    'font-size:0.75rem;text-transform:uppercase;letter-spacing:.1em;'
+    'color:#087e8b;font-weight:700;margin-bottom:12px;'
+)
+
+
 def _section_rows(title: str, rows: list[dict[str, object]]) -> str:
+    label = escape(title)
     if not rows:
-        return f"<section><h2>{escape(title)}</h2><p>Sin datos.</p></section>"
+        return (
+            f'<section style="margin-bottom:28px;">'
+            f'<h2 style="{_SECTION_H2}">{label}</h2>'
+            f'<p style="color:#68747a;font-size:0.85rem;font-style:italic;">Sin datos disponibles.</p>'
+            f'</section>'
+        )
     headers = tuple(rows[0].keys())
-    head = "".join(f"<th>{escape(str(header))}</th>" for header in headers)
-    body = "".join(
-        "<tr>"
-        + "".join(f"<td>{escape(_fmt(row.get(header)))}</td>" for header in headers)
-        + "</tr>"
-        for row in rows
+    head_cells = "".join(
+        f'<th style="padding:9px 14px;text-align:left;font-size:0.72rem;text-transform:uppercase;'
+        f'letter-spacing:.07em;background:#202427;color:#7bd3db;font-weight:700;white-space:nowrap;">'
+        f'{escape(str(h).replace("_", " "))}</th>'
+        for h in headers
     )
+    body_rows = ""
+    for i, row in enumerate(rows):
+        bg = "#f8fafb" if i % 2 == 0 else "#ffffff"
+        cells = "".join(
+            f'<td style="padding:8px 14px;border-bottom:1px solid #dce1e4;'
+            f'color:#172026;font-size:0.86rem;">{escape(_fmt(row.get(h)))}</td>'
+            for h in headers
+        )
+        body_rows += f'<tr style="background:{bg};">{cells}</tr>'
     return (
-        f"<section><h2>{escape(title)}</h2>"
-        f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
-        "</section>"
+        f'<section style="margin-bottom:32px;">'
+        f'<h2 style="{_SECTION_H2}">{label}</h2>'
+        f'<div style="border:1px solid #dce1e4;border-radius:8px;overflow:hidden;">'
+        f'<table style="border-collapse:collapse;width:100%;">'
+        f'<thead><tr>{head_cells}</tr></thead>'
+        f'<tbody>{body_rows}</tbody>'
+        f'</table></div></section>'
     )
 
 
@@ -112,39 +136,105 @@ def _dataset_rows(dataset: dict[str, Any]) -> dict[str, list[dict[str, object]]]
     }
 
 
+_TOTALS_STYLE: dict[str, tuple[str, str, str]] = {
+    "events": ("Eventos totales", "#087e8b", "#e6f4f5"),
+    "sessions": ("Sesiones SSH", "#087e8b", "#e6f4f5"),
+    "unique_source_ips": ("IPs únicas", "#9c3f00", "#ffe2c7"),
+    "successful_login_sessions": ("Logins exitosos", "#9d1c24", "#fde1e3"),
+    "download_sessions": ("Descargas", "#6c4f00", "#fff2c2"),
+}
+
+
+def _totals_cards(rows: list[dict[str, object]]) -> str:
+    if not rows:
+        return ""
+    totals = rows[0]
+    cards: list[str] = []
+    for key, value in totals.items():
+        label, color, bg = _TOTALS_STYLE.get(
+            key, (key.replace("_", " ").title(), "#087e8b", "#e6f4f5")
+        )
+        cards.append(
+            f'<div style="background:{bg};border-left:4px solid {color};border-radius:8px;'
+            f'padding:18px 24px;min-width:140px;flex:1;">'
+            f'<div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.07em;'
+            f'color:{color};font-weight:700;margin-bottom:8px;">{escape(label)}</div>'
+            f'<div style="font-size:2rem;font-weight:800;color:{color};">{escape(_fmt(value))}</div>'
+            f'</div>'
+        )
+    return (
+        '<section style="margin-bottom:32px;">'
+        f'<h2 style="{_SECTION_H2}">RESUMEN OPERATIVO</h2>'
+        f'<div style="display:flex;flex-wrap:wrap;gap:12px;">{"".join(cards)}</div>'
+        '</section>'
+    )
+
+
 def _html_report(report: ReportRun) -> bytes:
     dataset = report.dataset
     title = f"OSCORP ThreatLab - Reporte {report.period_type}"
     rows = _dataset_rows(dataset)
+    generated = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    period_str = (
+        f"{report.period_start.strftime('%Y-%m-%d %H:%M')} "
+        f"→ {report.period_end.strftime('%Y-%m-%d %H:%M')} UTC"
+    )
+    totals_html = _totals_cards(rows.get("totals", []))
     sections = "\n".join(
         _section_rows(label.replace("_", " ").title(), value)
         for label, value in rows.items()
+        if label != "totals"
     )
-    html = f"""<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <title>{escape(title)}</title>
-  <style>
-    body {{ font-family: Arial, sans-serif; margin: 32px; color: #172026; }}
-    h1 {{ margin-bottom: 4px; }}
-    h2 {{ margin-top: 28px; border-bottom: 1px solid #ccd3d8; padding-bottom: 6px; }}
-    table {{ border-collapse: collapse; width: 100%; margin-top: 10px; }}
-    th, td {{ border: 1px solid #d8dee3; padding: 7px 9px; text-align: left; }}
-    th {{ background: #eef2f4; }}
-    .meta {{ color: #52616b; margin-bottom: 24px; }}
-  </style>
-</head>
-<body>
-  <h1>{escape(title)}</h1>
-  <p class="meta">
-    Periodo: {escape(report.period_start.isoformat())}
-    a {escape(report.period_end.isoformat())}
-  </p>
-  {sections}
-</body>
-</html>
-"""
+    html = (
+        "<!doctype html>\n"
+        '<html lang="es">\n'
+        "<head>\n"
+        '  <meta charset="utf-8">\n'
+        '  <meta name="viewport" content="width=device-width,initial-scale=1">\n'
+        f"  <title>{escape(title)}</title>\n"
+        "  <style>\n"
+        "    *{box-sizing:border-box;margin:0;padding:0;}\n"
+        "    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;"
+        "background:#f4f6f8;color:#172026;}\n"
+        "    @media print{body{background:#fff;}}\n"
+        "  </style>\n"
+        "</head>\n"
+        "<body>\n"
+        # ── HEADER ──────────────────────────────────────────────────────────
+        '  <div style="background:#161a1d;">\n'
+        '    <div style="border-bottom:4px solid #f2a900;padding:28px 40px 24px;">\n'
+        '      <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">\n'
+        '        <div style="width:42px;height:42px;border-radius:8px;background:#087e8b;'
+        'display:flex;align-items:center;justify-content:center;font-size:1.3rem;'
+        'font-weight:900;color:#fff;flex-shrink:0;">O</div>\n'
+        '        <div>\n'
+        '          <div style="font-size:1.35rem;font-weight:800;color:#ffffff;letter-spacing:.02em;">'
+        "OSCORP ThreatLab</div>\n"
+        '          <div style="font-size:0.72rem;color:#7bd3db;letter-spacing:.1em;'
+        'text-transform:uppercase;margin-top:2px;">SSH Honeypot Platform</div>\n'
+        "        </div>\n"
+        "      </div>\n"
+        '      <div style="margin-top:8px;">\n'
+        '        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.1em;'
+        f'color:#52616b;margin-bottom:4px;">Reporte de Seguridad · {escape(report.period_type.upper())}</div>\n'
+        '        <div style="font-size:1rem;font-weight:600;color:#e8edf0;">'
+        f"{escape(period_str)}</div>\n"
+        "      </div>\n"
+        "    </div>\n"
+        "  </div>\n"
+        # ── CONTENT ─────────────────────────────────────────────────────────
+        '  <div style="max-width:980px;margin:0 auto;padding:36px 24px;">\n'
+        f"    {totals_html}\n"
+        f"    {sections}\n"
+        "  </div>\n"
+        # ── FOOTER ──────────────────────────────────────────────────────────
+        '  <div style="background:#202427;padding:18px 40px;text-align:center;">\n'
+        '    <span style="font-size:0.72rem;color:#52616b;">'
+        f"Generado el {escape(generated)} · OSCORP ThreatLab · Uso interno</span>\n"
+        "  </div>\n"
+        "</body>\n"
+        "</html>\n"
+    )
     return html.encode("utf-8")
 
 

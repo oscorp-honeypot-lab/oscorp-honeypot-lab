@@ -1395,6 +1395,21 @@ Resultados:
 
 Evidencia: docs/evidencias/fase33_5_consola_lab.md
 
+### Mejoras visuales post-implementación ✅
+
+- **Diseño de la página Laboratorio**: rediseño completo de `LabView.tsx` con iconos
+  Lucide (Lock, Eye, Bug, Zap), descripción de cada escenario, grid 2×2, badge de
+  estado, banda de actividad y terminal con tipografía monospace. CSS añadido en
+  `global.css` (~150 líneas) usando tokens del dashboard.
+- **Template HTML del motor de reportes**: rediseño de `_html_report()` y
+  `_section_rows()` en `report_service.py`. Header oscuro (`#161a1d`) con borde
+  amarillo, tarjetas métricas con colores por criticidad, tablas con zebra striping
+  y header teal, footer con timestamp. CSS inline, sin deps externas.
+
+Evidencia adicional:
+- docs/evidencias/fase33_5_html_report_redesign.md
+- Backend: 76/76 passed (suite completa)
+
 Skills previstos:
 
 ```text
