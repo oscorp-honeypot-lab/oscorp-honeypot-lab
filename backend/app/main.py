@@ -56,11 +56,11 @@ async def lifespan(app: FastAPI):
     analytics_repository = PostgresAnalyticsRepository(session_factory)
     app.state.analytics_service = AnalyticsService(
         analytics_repository,
-        rules_version="1.0.0",
+        rules_version="1.1.0",
     )
     app.state.export_service = ExportService(
         analytics_repository,
-        rules_version="1.0.0",
+        rules_version="1.1.0",
     )
     app.state.settings = settings
     logger.info("api_started", environment=settings.environment)

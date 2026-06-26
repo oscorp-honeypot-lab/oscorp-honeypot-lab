@@ -6,7 +6,10 @@ from risk.rules import ACTIVE_RULESET, RiskLevel, RiskRule, level_for_score
 
 
 class RiskRuleSetTests(unittest.TestCase):
-    def test_active_rules_cover_phase_14_signals(self) -> None:
+    def test_active_ruleset_version_is_1_1_0(self) -> None:
+        self.assertEqual(ACTIVE_RULESET.version, "1.1.0")
+
+    def test_active_rules_cover_all_signals_including_enrichment(self) -> None:
         active_ids = {rule.rule_id for rule in ACTIVE_RULESET.enabled_rules}
 
         self.assertEqual(
@@ -18,21 +21,23 @@ class RiskRuleSetTests(unittest.TestCase):
                 "download_tool",
                 "file_download",
                 "persistence_attempt",
+                "malicious_hash_reputation",
+                "cloud_origin",
             },
         )
 
-    def test_reserved_enrichment_rules_are_disabled(self) -> None:
-        reserved_ids = {rule.rule_id for rule in ACTIVE_RULESET.reserved_rules}
+    def test_no_reserved_rules_remain_in_active_ruleset(self) -> None:
+        self.assertEqual(ACTIVE_RULESET.reserved_rules, ())
 
-        self.assertEqual(
-            reserved_ids,
-            {"malicious_hash_reputation", "cloud_origin"},
-        )
-        self.assertTrue(
-            all(rule.reserved_reason for rule in ACTIVE_RULESET.reserved_rules)
-        )
+    def test_malicious_hash_reputation_rule_is_enabled(self) -> None:
+        rule_ids = {r.rule_id for r in ACTIVE_RULESET.enabled_rules}
+        self.assertIn("malicious_hash_reputation", rule_ids)
 
-    def test_active_rules_can_reach_critical_without_reserved_signals(self) -> None:
+    def test_cloud_origin_rule_is_enabled(self) -> None:
+        rule_ids = {r.rule_id for r in ACTIVE_RULESET.enabled_rules}
+        self.assertIn("cloud_origin", rule_ids)
+
+    def test_active_rules_can_reach_critical(self) -> None:
         maximum_active_score = sum(
             rule.weight for rule in ACTIVE_RULESET.enabled_rules
         )

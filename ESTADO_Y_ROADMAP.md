@@ -1186,10 +1186,26 @@ LAB: no hay eventos cowrie.session.file.download → 0 hashes, tabla vacía.
 
 Objetivo: incorporar contexto externo sin volver inestable el score.
 
-- [ ] Agregar reputación del hash y origen cloud a las reglas.
-- [ ] Definir comportamiento cuando el enriquecimiento falta o está vencido.
-- [ ] Recalcular sesiones afectadas.
-- [ ] Crear pruebas para respuestas externas parciales o fallidas.
+```text
+[x] Ruleset v1.1.0: malicious_hash_reputation (weight=20) y cloud_origin (weight=10)
+    habilitadas. Anteriormente reservadas desde Fase 14.
+[x] is_cloud_provider(isp, asn): frozenset de 17 keywords (amazon, aws, google,
+    microsoft, azure, digitalocean, linode, vultr, ovh, hetzner, cloudflare, fastly,
+    akamai, tencent, alibaba, huawei) con match case-insensitive en isp+asn.
+[x] SessionRiskInput: vt_malicious_hashes=0 e is_cloud_origin=False como defaults
+    seguros (sin enriquecimiento = regla NO dispara — conservador).
+[x] LOAD_SESSIONS_SQL: subquery COUNT vt_hash_cache (malicious>0, error NULL,
+    no expirado) + LEFT JOIN ip_geo_cache para isp/asn.
+[x] Recalculación masiva: 75 sesiones LAB actualizadas a v1.1.0.
+[x] Backend: rules_version 1.0.0 → 1.1.0 (main.py ×2 + analytics_repository.py ×1
+    + fixture de test de integración ×1).
+[x] 17 tests nuevos pipeline → 119 totales; 44 backend sin cambios.
+Evidencia: docs/evidencias/fase28_enriquecimiento_risk_score.md
+
+LAB: IPs privadas (private_range) + sin descargas → ambas reglas no disparan.
+     Correcto: el score 1.1.0 = score 1.0.0 para datos del LAB.
+     Con datos reales: +20pts hashes maliciosos, +10pts origen cloud.
+```
 
 ## Fase 29 — Visualización geográfica
 

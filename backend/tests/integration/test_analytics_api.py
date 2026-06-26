@@ -216,7 +216,7 @@ def analytics_session() -> dict[str, object]:
                     risk_level,
                     reasons
                 )
-                VALUES (%s, '1.0.0', 75, 'high', CAST(%s AS jsonb))
+                VALUES (%s, '1.1.0', 75, 'high', CAST(%s AS jsonb))
                 """,
                 (
                     session_key,

@@ -6,6 +6,18 @@ import re
 from .rules import ACTIVE_RULESET, RiskLevel, RiskRuleSet, level_for_score
 
 
+_CLOUD_KEYWORDS: frozenset[str] = frozenset({
+    "amazon", "aws", "google", "microsoft", "azure", "digitalocean",
+    "linode", "vultr", "ovh", "hetzner", "cloudflare", "fastly",
+    "akamai", "tencent", "alibaba", "huawei",
+})
+
+
+def is_cloud_provider(isp: str | None, asn: str | None) -> bool:
+    combined = " ".join(filter(None, [isp, asn])).lower()
+    return any(kw in combined for kw in _CLOUD_KEYWORDS)
+
+
 @dataclass(frozen=True, slots=True)
 class SessionRiskInput:
     session_key: str
@@ -13,6 +25,8 @@ class SessionRiskInput:
     has_download: bool
     usernames: tuple[str, ...] = ()
     commands: tuple[str, ...] = ()
+    vt_malicious_hashes: int = 0
+    is_cloud_origin: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +108,13 @@ def evaluate_session(
             evidence = matching_values(session.commands, rule.evidence_patterns)
         elif rule.rule_id == "file_download" and session.has_download:
             evidence = ("cowrie.session.file_download",)
+        elif (
+            rule.rule_id == "malicious_hash_reputation"
+            and session.vt_malicious_hashes > 0
+        ):
+            evidence = (f"vt:malicious:{session.vt_malicious_hashes}",)
+        elif rule.rule_id == "cloud_origin" and session.is_cloud_origin:
+            evidence = ("enrichment.network_origin",)
 
         if evidence:
             reasons.append(

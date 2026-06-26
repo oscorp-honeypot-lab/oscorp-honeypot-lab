@@ -74,7 +74,7 @@ def level_for_score(score: int) -> RiskLevel:
 
 
 ACTIVE_RULESET = RiskRuleSet(
-    version="1.0.0",
+    version="1.1.0",
     score_cap=100,
     rules=(
         RiskRule(
@@ -143,16 +143,12 @@ ACTIVE_RULESET = RiskRuleSet(
             weight=20,
             signal="enrichment.virustotal",
             description="VirusTotal classified a downloaded hash as malicious.",
-            enabled=False,
-            reserved_reason="VirusTotal enrichment is planned for a later phase.",
         ),
         RiskRule(
             rule_id="cloud_origin",
             weight=10,
             signal="enrichment.network_origin",
             description="The source IP belongs to a cloud or hosting provider.",
-            enabled=False,
-            reserved_reason="Network-origin enrichment is planned for a later phase.",
         ),
     ),
 )

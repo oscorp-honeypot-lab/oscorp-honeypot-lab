@@ -614,7 +614,7 @@ class PostgresAnalyticsRepository:
                 ),
                 {
                     "session_key": session_key,
-                    "rules_version": "1.0.0",
+                    "rules_version": "1.1.0",
                 },
             )
             return self._session_item(result.one())

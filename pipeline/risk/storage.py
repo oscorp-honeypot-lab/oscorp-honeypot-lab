@@ -6,7 +6,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from .rules import ACTIVE_RULESET, RiskRuleSet
-from .scoring import RiskAssessment, SessionRiskInput, evaluate_session
+from .scoring import RiskAssessment, SessionRiskInput, evaluate_session, is_cloud_provider
 
 
 LOAD_SESSIONS_SQL = """
@@ -23,13 +23,31 @@ SELECT
         ARRAY_AGG(e.command_input ORDER BY e.timestamp_evento, e.id)
             FILTER (WHERE e.command_input IS NOT NULL),
         ARRAY[]::text[]
-    ) AS commands
+    ) AS commands,
+    COALESCE(
+        (SELECT COUNT(*)::int
+         FROM eventos ev
+         JOIN vt_hash_cache v
+           ON v.sha256 = ev.shasum
+          AND v.expires_at > NOW()
+          AND v.error IS NULL
+          AND v.malicious > 0
+         WHERE COALESCE(ev.sensor, 'unknown') = s.sensor
+           AND ev.session_id = s.session_id
+           AND ev.eventid = 'cowrie.session.file.download'),
+        0
+    ) AS vt_malicious_count,
+    g.isp  AS geo_isp,
+    g.asn  AS geo_asn
 FROM sessions s
 LEFT JOIN eventos e
   ON s.sensor = COALESCE(e.sensor, 'unknown')
  AND s.session_id = e.session_id
+LEFT JOIN ip_geo_cache g
+  ON g.ip = s.src_ip
+ AND g.expires_at > NOW()
 WHERE (%s::text[] IS NULL OR s.session_key = ANY(%s::text[]))
-GROUP BY s.session_key, s.has_successful_login, s.has_download
+GROUP BY s.session_key, s.has_successful_login, s.has_download, g.isp, g.asn
 ORDER BY s.session_key
 """
 
@@ -68,6 +86,11 @@ def load_session_inputs(
             has_download=bool(row[2]),
             usernames=tuple(row[3]),
             commands=tuple(row[4]),
+            vt_malicious_hashes=int(row[5]),
+            is_cloud_origin=is_cloud_provider(
+                str(row[6]) if row[6] is not None else None,
+                str(row[7]) if row[7] is not None else None,
+            ),
         )
         for row in rows
     )
