@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 
 
-_TRIGGER_LABELS: dict[str, str] = {
-    "high_risk": "Sesión de alto riesgo detectada",
-    "successful_login": "Login exitoso en honeypot",
-    "file_download": "Descarga de archivo en honeypot",
+_TRIGGER_TYPE_LABELS: dict[str, str] = {
+    "high_risk": "ALTO RIESGO",
+    "successful_login": "LOGIN EXITOSO",
+    "file_download": "DESCARGA DE ARCHIVO",
 }
 
 _RISK_EMOJI: dict[str, str] = {
@@ -28,19 +28,31 @@ def format_alert_message(
     risk_level: str | None,
     risk_score: int | None,
     event_timestamp: str | None,
+    src_ip: str | None = None,
+    username: str | None = None,
+    duration_seconds: int | None = None,
+    download_count: int | None = None,
 ) -> str:
-    label = _TRIGGER_LABELS.get(trigger, trigger)
+    emoji = _RISK_EMOJI.get(risk_level or "", "⚪")
+    risk_str = risk_level.upper() if risk_level else "N/A"
+    score_part = f" · {risk_score}" if risk_score is not None else ""
+    tipo = _TRIGGER_TYPE_LABELS.get(trigger, trigger.upper())
+
     lines = [
-        "<b>OSCORP ThreatLab — Alerta</b>",
-        label,
-        f"Sesión: <code>{session_key}</code>",
+        "🚨 ALERTA DE INTRUSIÓN 🚨",
+        "",
+        f"{emoji} Riesgo: {risk_str}{score_part}",
+        f"📡 Tipo: {tipo}",
+        "",
+        f"🖥️ Sesión: {session_key}",
+        f"🌐 IP Atacante: {src_ip or 'N/A'}",
+        f"👤 Usuario: {username or 'N/A'}",
+        f"⏱️ Duración: {duration_seconds if duration_seconds is not None else 'N/A'}s",
+        f"📥 Descargas: {download_count if download_count is not None else 'N/A'}",
     ]
-    if risk_level is not None:
-        emoji = _RISK_EMOJI.get(risk_level, "⚪")
-        score_part = f" · {risk_score}" if risk_score is not None else ""
-        lines.append(f"Riesgo: {emoji} {risk_level}{score_part}")
     if event_timestamp is not None:
-        lines.append(f"Evento: {event_timestamp}")
+        lines += ["", f"🕐 {event_timestamp}"]
+    lines += ["", "🤖 OSCORP ThreatLab · Detección automática"]
     return "\n".join(lines)
 
 
@@ -60,7 +72,7 @@ class TelegramAdapter:
     def send(self, message: str) -> tuple[bool, str | None]:
         url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
         payload = json.dumps(
-            {"chat_id": self.chat_id, "text": message, "parse_mode": "HTML"},
+            {"chat_id": self.chat_id, "text": message},
             ensure_ascii=False,
         ).encode("utf-8")
         req = urllib.request.Request(

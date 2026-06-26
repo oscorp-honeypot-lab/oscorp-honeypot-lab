@@ -77,82 +77,93 @@ class TelegramAdapterSendTests(unittest.TestCase):
 
 
 class FormatAlertMessageTests(unittest.TestCase):
-    def test_message_includes_session_key(self) -> None:
-        msg = format_alert_message(
+    def _base_msg(self, **overrides) -> str:
+        kwargs = dict(
             trigger="high_risk",
             session_key="sensor:abc123",
             risk_level="high",
             risk_score=75,
-            event_timestamp="2026-06-25T21:00:00Z",
+            event_timestamp="25-06-2026 21:00:00 UTC",
+            src_ip="192.168.1.100",
+            username="root",
+            duration_seconds=30,
+            download_count=2,
         )
+        kwargs.update(overrides)
+        return format_alert_message(**kwargs)
+
+    def test_message_includes_session_key(self) -> None:
+        msg = self._base_msg()
         self.assertIn("sensor:abc123", msg)
 
     def test_high_risk_trigger_has_readable_label(self) -> None:
-        msg = format_alert_message(
-            trigger="high_risk",
-            session_key="s:x",
-            risk_level="high",
-            risk_score=75,
-            event_timestamp=None,
-        )
+        msg = self._base_msg(trigger="high_risk")
         self.assertIn("alto riesgo", msg.lower())
 
     def test_successful_login_trigger_has_readable_label(self) -> None:
-        msg = format_alert_message(
-            trigger="successful_login",
-            session_key="s:x",
-            risk_level=None,
-            risk_score=None,
-            event_timestamp=None,
-        )
+        msg = self._base_msg(trigger="successful_login", risk_level=None, risk_score=None)
         self.assertIn("login", msg.lower())
 
     def test_file_download_trigger_has_readable_label(self) -> None:
-        msg = format_alert_message(
-            trigger="file_download",
-            session_key="s:x",
-            risk_level=None,
-            risk_score=None,
-            event_timestamp=None,
-        )
+        msg = self._base_msg(trigger="file_download", risk_level=None, risk_score=None)
         self.assertIn("descarga", msg.lower())
 
     def test_critical_risk_emoji_is_included(self) -> None:
-        msg = format_alert_message(
-            trigger="high_risk",
-            session_key="s:x",
-            risk_level="critical",
-            risk_score=90,
-            event_timestamp=None,
-        )
+        msg = self._base_msg(risk_level="critical", risk_score=90)
         self.assertIn("🔴", msg)
 
     def test_high_risk_emoji_is_included(self) -> None:
-        msg = format_alert_message(
-            trigger="high_risk",
-            session_key="s:x",
-            risk_level="high",
-            risk_score=75,
-            event_timestamp=None,
-        )
+        msg = self._base_msg(risk_level="high", risk_score=75)
         self.assertIn("🟠", msg)
 
     def test_risk_score_is_included_when_present(self) -> None:
-        msg = format_alert_message(
-            trigger="high_risk",
-            session_key="s:x",
-            risk_level="high",
-            risk_score=75,
-            event_timestamp=None,
-        )
+        msg = self._base_msg(risk_score=75)
         self.assertIn("75", msg)
 
     def test_event_timestamp_is_included_when_present(self) -> None:
-        msg = format_alert_message(
-            trigger="high_risk",
-            session_key="s:x",
-            risk_level="high",
-            risk_score=75,
-            event_timestamp="2026-06-25T21:00:00Z",
-        )
-        self.assertIn("2026-06-25", msg)
+        msg = self._base_msg(event_timestamp="25-06-2026 21:00:00 UTC")
+        self.assertIn("25-06-2026", msg)
+
+    # --- NEW FORMAT ---
+
+    def test_header_contains_intrusion_alert(self) -> None:
+        msg = self._base_msg()
+        self.assertIn("🚨", msg)
+        self.assertIn("ALERTA DE INTRUSIÓN", msg)
+
+    def test_tipo_label_shown_in_uppercase(self) -> None:
+        msg = self._base_msg(trigger="high_risk")
+        self.assertIn("ALTO RIESGO", msg)
+
+    def test_tipo_label_for_successful_login_is_uppercase(self) -> None:
+        msg = self._base_msg(trigger="successful_login")
+        self.assertIn("LOGIN EXITOSO", msg)
+
+    def test_tipo_label_for_file_download_is_uppercase(self) -> None:
+        msg = self._base_msg(trigger="file_download")
+        self.assertIn("DESCARGA DE ARCHIVO", msg)
+
+    def test_src_ip_is_included_when_present(self) -> None:
+        msg = self._base_msg(src_ip="10.0.0.55")
+        self.assertIn("10.0.0.55", msg)
+
+    def test_username_is_included_when_present(self) -> None:
+        msg = self._base_msg(username="admin")
+        self.assertIn("admin", msg)
+
+    def test_duration_is_included_when_present(self) -> None:
+        msg = self._base_msg(duration_seconds=120)
+        self.assertIn("120", msg)
+
+    def test_download_count_is_included_when_present(self) -> None:
+        msg = self._base_msg(download_count=3)
+        self.assertIn("📥", msg)
+        self.assertIn("3", msg)
+
+    def test_none_optional_fields_show_na(self) -> None:
+        msg = self._base_msg(src_ip=None, username=None, duration_seconds=None, download_count=None)
+        self.assertEqual(msg.count("N/A"), 4)
+
+    def test_footer_contains_oscorp_signature(self) -> None:
+        msg = self._base_msg()
+        self.assertIn("🤖 OSCORP ThreatLab", msg)

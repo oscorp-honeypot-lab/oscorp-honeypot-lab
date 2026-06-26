@@ -57,6 +57,10 @@ def _alert_row(
         "high",
         75,
         BASE_TS,
+        "192.168.1.100",
+        "root",
+        30,
+        2,
         attempt_count,
     )
 

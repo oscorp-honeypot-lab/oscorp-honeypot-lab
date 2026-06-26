@@ -1110,6 +1110,11 @@ Objetivo: enviar alertas y registrar su resultado real.
 [x] format_alert_message() con HTML (negritas, code) y emojis de nivel de riesgo.
 [x] 22 pruebas nuevas: 15 telegram + 7 dispatcher → 51 pruebas pipeline totales.
 [x] Flujo validado con mock adapter: 12 alertas sent, mttd=4209s; retry → failed verificado.
+[x] Formato de mensaje rediseñado: encabezado visual, src_ip, username, duration, downloads.
+[x] dispatcher.py: LEFT JOIN sessions para obtener los campos extra del atacante.
+[x] format_alert_message() acepta src_ip, username, duration_seconds, download_count (opcionales).
+[x] Timestamp formateado como dd-mm-yyyy HH:MM:SS UTC; eliminado parse_mode HTML (texto plano).
+[x] 10 tests nuevos para el nuevo formato → 61 pruebas pipeline totales.
 Evidencia: docs/evidencias/fase24_telegram_alertas.md
 ```
 
