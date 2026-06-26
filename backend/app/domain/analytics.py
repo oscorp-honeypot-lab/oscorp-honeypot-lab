@@ -151,6 +151,15 @@ class MttdStats:
 
 
 @dataclass(frozen=True, slots=True)
+class VtStats:
+    total_cached: int
+    malicious_detected: int
+    not_found: int
+    error_count: int
+    max_malicious: int | None
+
+
+@dataclass(frozen=True, slots=True)
 class AlertItem:
     id: UUID
     session_key: str

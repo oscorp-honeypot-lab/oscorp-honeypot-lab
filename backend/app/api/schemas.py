@@ -16,6 +16,7 @@ from app.domain.analytics import (
     SessionDetail,
     SessionListItem,
     TimelinePoint,
+    VtStats,
 )
 from app.domain.health import HealthStatus, SystemHealth
 from app.domain.identity import Role, UserIdentity
@@ -282,6 +283,24 @@ class MttdStatsResponse(BaseModel):
             by_trigger=tuple(
                 MttdTriggerStatResponse.model_validate(t) for t in stats.by_trigger
             ),
+        )
+
+
+class VtStatsResponse(BaseModel):
+    total_cached: int
+    malicious_detected: int
+    not_found: int
+    error_count: int
+    max_malicious: int | None
+
+    @classmethod
+    def from_domain(cls, stats: VtStats) -> "VtStatsResponse":
+        return cls(
+            total_cached=stats.total_cached,
+            malicious_detected=stats.malicious_detected,
+            not_found=stats.not_found,
+            error_count=stats.error_count,
+            max_malicious=stats.max_malicious,
         )
 
 

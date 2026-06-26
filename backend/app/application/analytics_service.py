@@ -11,6 +11,7 @@ from app.domain.analytics import (
     SessionFilters,
     SessionListItem,
     TimelinePoint,
+    VtStats,
 )
 from app.domain.ports.analytics_repository import AnalyticsRepository
 from app.domain.identity import UserIdentity
@@ -74,6 +75,9 @@ class AnalyticsService:
 
     async def get_mttd_stats(self) -> MttdStats:
         return await self._repository.get_mttd_stats()
+
+    async def get_vt_stats(self) -> VtStats:
+        return await self._repository.get_vt_stats()
 
     async def list_alerts(
         self,

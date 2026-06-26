@@ -14,6 +14,7 @@ from app.domain.analytics import (
     SessionFilters,
     SessionListItem,
     TimelinePoint,
+    VtStats,
 )
 
 
@@ -47,6 +48,8 @@ class AnalyticsRepository(Protocol):
     ) -> SessionDetail | None: ...
 
     async def get_mttd_stats(self) -> MttdStats: ...
+
+    async def get_vt_stats(self) -> VtStats: ...
 
     async def list_alerts(
         self,

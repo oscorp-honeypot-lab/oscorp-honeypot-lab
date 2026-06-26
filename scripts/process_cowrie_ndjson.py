@@ -25,6 +25,8 @@ from alerts.telegram import TelegramAdapter
 from geo.adapter import IpApiAdapter
 from geo.enricher import enrich_session_ips
 from risk.storage import recalculate_scores
+from vt.adapter import VirusTotalAdapter
+from vt.enricher import enrich_download_hashes
 
 
 INSERT_EVENT_SQL = """
@@ -1013,6 +1015,7 @@ def execute_pipeline(
                 generate_session_alerts(connection, session_keys, run_id)
                 dispatch_pending_alerts(connection, TelegramAdapter.from_env())
                 enrich_session_ips(connection, IpApiAdapter())
+                enrich_download_hashes(connection, VirusTotalAdapter())
                 indexed = index_events(
                     elasticsearch_url,
                     elasticsearch_index,

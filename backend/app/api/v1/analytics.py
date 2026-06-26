@@ -22,6 +22,7 @@ from app.api.schemas import (
     SessionPageResponse,
     SessionReviewRequest,
     TimelineResponse,
+    VtStatsResponse,
 )
 from app.application.analytics_service import AnalyticsService, SessionNotFound
 from app.domain.analytics import EventFilters, SessionFilters
@@ -56,6 +57,12 @@ async def timeline(
 async def mttd_stats(_: Viewer, service: Service) -> MttdStatsResponse:
     stats = await service.get_mttd_stats()
     return MttdStatsResponse.from_domain(stats)
+
+
+@router.get("/analytics/vt-stats", response_model=VtStatsResponse)
+async def vt_stats(_: Viewer, service: Service) -> VtStatsResponse:
+    stats = await service.get_vt_stats()
+    return VtStatsResponse.from_domain(stats)
 
 
 @router.get("/sessions", response_model=SessionPageResponse)

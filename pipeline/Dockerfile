@@ -17,6 +17,7 @@ COPY pipeline/migrations /app/migrations
 COPY pipeline/contracts /app/contracts
 COPY pipeline/alerts /app/alerts
 COPY pipeline/geo /app/geo
+COPY pipeline/vt /app/vt
 COPY pipeline/risk /app/risk
 COPY pipeline/tests /app/tests
 COPY pipeline/pipeline_worker.py /app/pipeline_worker.py

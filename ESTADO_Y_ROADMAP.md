@@ -1164,10 +1164,23 @@ LAB: IPs son privadas (172.25.0.x) → error=private_range, country=NULL.
 
 Objetivo: contextualizar los archivos descargados.
 
-- [ ] Integrar VirusTotal mediante un adaptador.
-- [ ] Consultar hashes sin subir payloads.
-- [ ] Guardar resultado, fecha de consulta y errores.
-- [ ] Agregar caché, límites y gestión segura de la API key.
+```text
+[x] Migración 0012_vt_hash_cache: sha256 PK, malicious, suspicious, undetected,
+    harmless, timeout (INTEGER), last_analysis_date BIGINT, reputation INTEGER,
+    queried_at, expires_at, error TEXT.
+[x] VirusTotalAdapter: GET api/v3/files/{sha256} x-apikey (VT_API_KEY env),
+    sin nuevas deps (urllib.request). Sin clave → error="no_api_key" sin llamada HTTP.
+    Errores tipados: rate_limited, not_found, http_error:{code}, url_error:{r}.
+[x] Caché con TTL 30 días (análisis VT es estable); ON CONFLICT (sha256) DO UPDATE.
+    LIMIT 10/run (VT free: 4 req/min). no_api_key no se almacena para permitir reintento.
+[x] Backend: VtStats + GET /api/v1/analytics/vt-stats (total_cached, malicious_detected,
+    not_found, error_count, max_malicious).
+[x] 20 tests pipeline (8+7+5) → 102 total; 6 tests backend (3+3) → 44 total.
+Evidencia: docs/evidencias/fase27_virustotal_hashes.md
+
+LAB: no hay eventos cowrie.session.file.download → 0 hashes, tabla vacía.
+     Con hashes reales y VT_API_KEY configurada: enriquecimiento automático.
+```
 
 ## Fase 28 — Enriquecimiento aplicado al Risk Score
 

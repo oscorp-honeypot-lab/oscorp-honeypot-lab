@@ -21,6 +21,7 @@ from app.domain.analytics import (
     SessionFilters,
     SessionListItem,
     TimelinePoint,
+    VtStats,
 )
 
 
@@ -816,6 +817,31 @@ class PostgresAnalyticsRepository:
             total_pending=total_pending,
             failure_rate=failure_rate,
             by_trigger=by_trigger,
+        )
+
+    async def get_vt_stats(self) -> VtStats:
+        async with self._session_factory() as session:
+            row = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            COUNT(*)                                            AS total_cached,
+                            COUNT(*) FILTER (WHERE error IS NULL
+                                             AND malicious > 0)                AS malicious_detected,
+                            COUNT(*) FILTER (WHERE error = 'not_found')        AS not_found,
+                            COUNT(*) FILTER (WHERE error IS NOT NULL)          AS error_count,
+                            MAX(malicious)                                     AS max_malicious
+                        FROM vt_hash_cache
+                        WHERE expires_at > NOW()
+                    """)
+                )
+            ).one()
+        return VtStats(
+            total_cached=int(row[0]),
+            malicious_detected=int(row[1]),
+            not_found=int(row[2]),
+            error_count=int(row[3]),
+            max_malicious=int(row[4]) if row[4] is not None else None,
         )
 
     async def fail_export(
