@@ -1267,14 +1267,21 @@ Evidencia: docs/evidencias/fase31_formatos_entrega_reportes.md
 LAB: HTML + CSV descargables desde API/dashboard; Telegram registra
 `skipped` si no hay credenciales y `report_deliveries` audita entregas.
 
-## Fase 32 — Dashboards operativos de Kibana
+## Fase 32 — Dashboards operativos de Kibana ✅
 
 Objetivo: crear una capa complementaria para operación y tiempo.
 
-- [ ] Crear el data view de `cowrie-events`.
-- [ ] Crear paneles de eventos, sesiones y evolución temporal.
-- [ ] Crear filtros y tablas operativas.
-- [ ] Validar los paneles con datos LAB.
+- [x] Crear el data view de `cowrie-events`.
+- [x] Crear paneles de eventos, sesiones y evolución temporal.
+- [x] Crear filtros y tablas operativas.
+- [x] Validar los paneles con datos LAB.
+
+Evidencia: docs/evidencias/fase32_dashboards_operativos_kibana.md
+
+LAB: `scripts/configure_kibana_phase32.ps1` crea/reutiliza el data view,
+5 visualizaciones, una búsqueda guardada y el dashboard
+`oscorp-phase32-operational`. Validado contra 2451 documentos en
+`cowrie-events`; verificación visual OK con 6 paneles renderizados.
 
 ## Fase 33 — Dashboards analíticos de Kibana versionados
 

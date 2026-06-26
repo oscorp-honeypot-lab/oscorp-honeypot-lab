@@ -275,6 +275,8 @@ services:
     pull_policy: never
     container_name: oscorp_frontend
     restart: unless-stopped
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     depends_on:
@@ -312,6 +314,7 @@ services:
       ELASTICSEARCH_URL: http://elasticsearch:9200
       ELASTICSEARCH_INDEX: ${ELASTICSEARCH_INDEX:-cowrie-events}
       COWRIE_LOG_PATH: /files/cowrie/cowrie.json
+      VT_API_KEY: ${VT_API_KEY:-${VIRUSTOTAL_API_KEY:-}}
       PIPELINE_WORKER_HOST: 0.0.0.0
       PIPELINE_WORKER_PORT: 8080
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
@@ -352,6 +355,7 @@ services:
       ELASTICSEARCH_URL: http://elasticsearch:9200
       ELASTICSEARCH_INDEX: ${ELASTICSEARCH_INDEX:-cowrie-events}
       COWRIE_LOG_PATH: /files/cowrie/cowrie.json
+      VT_API_KEY: ${VT_API_KEY:-${VIRUSTOTAL_API_KEY:-}}
     volumes:
       - ./cowrie/logs:/files/cowrie:ro
     depends_on:
