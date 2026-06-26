@@ -19,6 +19,7 @@ VPS publica
 
 PC local
   scripts/sync_vps_logs.ps1 -> cowrie/logs/cowrie.json
+  scripts/run_real_sync.ps1 -> sincronizacion periodica
   scripts/run_n8n_pipeline.ps1
   PostgreSQL / Elasticsearch / app web / Telegram
 ```
@@ -106,6 +107,32 @@ Luego el pipeline local procesa ese archivo igual que en LAB. Si el archivo se
 reemplaza o rota, el checkpoint incremental detecta el cambio y la idempotencia
 por `event_hash` evita duplicados persistidos.
 
+## Operacion local del modo REAL
+
+Para levantar el stack local que procesa los eventos de la VPS:
+
+```powershell
+.\scripts\setup_real.ps1
+```
+
+Este script prepara `.env`, levanta `docker compose --profile real`, inicializa
+la identidad administrativa y sincroniza credenciales/workflow n8n.
+
+Para una ejecucion continua con reintentos:
+
+```powershell
+.\scripts\run_real_sync.ps1
+```
+
+Por defecto ejecuta:
+
+```text
+scp VPS:cowrie.json -> cowrie/logs/cowrie.json
+run_n8n_pipeline.ps1 -Profile real
+```
+
+y deja logs locales en `logs/real-sync/`.
+
 ## Endurecimiento inicial
 
 La fase 34 deja una base prudente, no un hardening final:
@@ -138,6 +165,5 @@ Esta validacion comprueba:
 
 - Ejecutar `setup_vps.ps1` contra la VPS real de DigitalOcean.
 - Probar exposicion publica de Cowrie con eventos reales controlados.
-- Automatizar sincronizacion periodica con reintentos y evidencia.
 - Definir rotacion/retencion de logs en VPS.
 - Evaluar si conviene migrar de password SSH a clave SSH.

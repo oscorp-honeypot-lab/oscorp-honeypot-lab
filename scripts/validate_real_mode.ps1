@@ -23,15 +23,20 @@ Assert-Command -Name "ssh"
 Assert-Command -Name "scp"
 Assert-Command -Name "docker"
 
-Write-Host "[real] Verificando artefactos de fase 34..."
+Write-Host "[real] Verificando artefactos REAL..."
 Assert-File -Path "scripts/setup_vps.ps1"
 Assert-File -Path "scripts/sync_vps_logs.ps1"
+Assert-File -Path "scripts/setup_real.ps1"
+Assert-File -Path "scripts/run_real_sync.ps1"
 Assert-File -Path "docs/arquitectura-vps.md"
 
 Write-Host "[real] Validando sintaxis PowerShell..."
 $scripts = @(
     "scripts/setup_vps.ps1",
     "scripts/sync_vps_logs.ps1",
+    "scripts/setup_real.ps1",
+    "scripts/run_real_sync.ps1",
+    "scripts/run_n8n_pipeline.ps1",
     "scripts/validate_real_mode.ps1"
 )
 foreach ($script in $scripts) {

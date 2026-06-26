@@ -1,3 +1,8 @@
+param(
+    [ValidateSet("lab", "real")]
+    [string]$Profile = "lab"
+)
+
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectRoot
@@ -11,13 +16,13 @@ function Invoke-Docker {
     }
 }
 
-Write-Host "[n8n-pipeline] Ejecutando workflow OSCORP..."
+Write-Host "[n8n-pipeline] Ejecutando workflow OSCORP con perfil $Profile..."
 Invoke-Docker compose stop n8n
 try {
     $previousErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        $executionOutput = & docker compose --profile lab run --rm --no-deps n8n execute --id=oscorp-cowrie-ndjson-pipeline --rawOutput
+        $executionOutput = & docker compose --profile $Profile run --rm --no-deps n8n execute --id=oscorp-cowrie-ndjson-pipeline --rawOutput
         $exitCode = $LASTEXITCODE
     }
     finally {
@@ -29,7 +34,7 @@ try {
     }
 }
 finally {
-    Invoke-Docker compose --profile lab up -d --wait n8n
+    Invoke-Docker compose --profile $Profile up -d --wait n8n
 }
 
 $executionText = $executionOutput -join "`n"

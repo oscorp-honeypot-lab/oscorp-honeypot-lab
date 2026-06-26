@@ -121,11 +121,11 @@ $bytes = (Get-Item -LiteralPath $localFullPath).Length
 Write-Host "[vps-sync] Log sincronizado ($bytes bytes)."
 
 if ($RunPipeline) {
-    & "$PSScriptRoot\run_n8n_pipeline.ps1"
+    & "$PSScriptRoot\run_n8n_pipeline.ps1" -Profile real
     if ($LASTEXITCODE -ne 0) {
         throw "El pipeline finalizo con codigo $LASTEXITCODE."
     }
 }
 else {
-    Write-Host "[vps-sync] Para procesar eventos: .\scripts\run_n8n_pipeline.ps1"
+    Write-Host "[vps-sync] Para procesar eventos REAL: .\scripts\run_n8n_pipeline.ps1 -Profile real"
 }

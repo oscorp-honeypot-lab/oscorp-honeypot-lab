@@ -207,7 +207,7 @@ Entrega de alertas Telegram:                Implementada en Fase 24 (configurabl
 MTTD real:                                  Parcial — sent_at y mttd_seconds en alerts; API en Fase 25
 VirusTotal e ip-api:                        No implementados en la reestructuración
 Reportes automáticos:                       No implementados
-Modo REAL/VPS:                              Base Fase 34 implementada; VPS real pendiente de validar
+Modo REAL/VPS:                              Base Fase 35 implementada; VPS real pendiente de validar
 Pruebas automatizadas/CI:                   Pruebas backend y pipeline integradas; CI pendiente
 Actualización final de la tesis:            Pendiente hasta finalizar el sistema
 ```
@@ -1452,13 +1452,20 @@ Evidencia: docs/evidencias/fase34_arquitectura_vps.md
 Objetivo: probar la base de Fase 34 contra la VPS real y automatizar la captura
 continua con evidencia operativa.
 
+- [x] Crear `scripts/setup_real.ps1` para iniciar el stack local REAL.
+- [x] Parametrizar `scripts/run_n8n_pipeline.ps1` con `-Profile lab|real`.
+- [x] Ajustar `scripts/sync_vps_logs.ps1 -RunPipeline` para usar perfil `real`.
+- [x] Crear `scripts/run_real_sync.ps1` con intervalo, reintentos y logs.
+- [x] Actualizar README con guia para entrar, iniciar y operar modo REAL.
+- [x] Actualizar arquitectura y evidencia de fase.
 - [ ] Ejecutar `scripts/setup_vps.ps1` en la PC de la persona con credenciales.
 - [ ] Confirmar que Cowrie recibe trafico real en la VPS de DigitalOcean.
 - [ ] Ejecutar `scripts/sync_vps_logs.ps1 -RunPipeline` y validar datos en app,
       PostgreSQL, Elasticsearch y Telegram.
-- [ ] Agregar sincronizacion periodica con reintentos y registro de resultados.
 - [ ] Definir rotacion/retencion de logs y procedimiento de apagado de la VPS.
 - [ ] Evaluar migracion de password SSH a clave SSH dedicada.
+
+Evidencia: docs/evidencias/fase35_operacion_vps.md
 
 ## Fase 36 — Separación y comparación LAB/REAL
 

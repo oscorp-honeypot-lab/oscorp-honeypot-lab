@@ -445,13 +445,32 @@ El script instala Docker en Ubuntu, crea `/opt/oscorp-cowrie`, levanta Cowrie en
 el puerto `2222` y valida que el contenedor quede corriendo. No modifica el SSH
 administrativo de la VPS.
 
-### 3. Levantar el stack local REAL
+### 3. Iniciar el stack local REAL
 
 ```powershell
-docker compose --profile real up -d --build
+.\scripts\setup_real.ps1
 ```
 
-Este perfil no levanta Cowrie local, `attacker-sim` ni `payload-server`.
+Este script prepara `.env` si falta, valida Docker, levanta el perfil `real`,
+inicializa el usuario administrador y sincroniza credenciales/workflow n8n.
+
+URLs locales:
+
+```text
+App web:       http://localhost:5173/dashboard
+Backend API:   http://localhost:8000/docs
+n8n:           http://localhost:5678
+Kibana:        http://localhost:5601
+Elasticsearch: http://localhost:9200
+PostgreSQL:    localhost:5433
+```
+
+El perfil `real` no levanta Cowrie local, `attacker-sim` ni `payload-server`.
+Cowrie vive en la VPS.
+
+Nota: para usar la app local por HTTP, dejar `OSCORP_API_ENVIRONMENT=lab`.
+El perfil Docker `real` ya separa el sensor VPS del LAB local. Si se cambia
+`OSCORP_API_ENVIRONMENT=real`, tambien hay que configurar HTTPS/cookies seguras.
 
 ### 4. Sincronizar eventos reales
 
@@ -471,7 +490,40 @@ Luego revisar la app:
 http://localhost:5173/dashboard
 ```
 
-### 5. Validar la base REAL sin conectarse a la VPS
+### 5. Sincronizacion continua opcional
+
+Para dejar una sincronizacion periodica mientras se observa la VPS:
+
+```powershell
+.\scripts\run_real_sync.ps1
+```
+
+Por defecto sincroniza cada 5 minutos, ejecuta el pipeline, reintenta fallos y
+deja logs locales en:
+
+```text
+logs/real-sync/
+```
+
+Una sola ejecucion con reintentos:
+
+```powershell
+.\scripts\run_real_sync.ps1 -Once
+```
+
+Cambiar intervalo:
+
+```powershell
+.\scripts\run_real_sync.ps1 -IntervalSeconds 60
+```
+
+Sin ejecutar pipeline, solo traer el archivo:
+
+```powershell
+.\scripts\run_real_sync.ps1 -NoPipeline
+```
+
+### 6. Validar la base REAL sin conectarse a la VPS
 
 ```powershell
 .\scripts\validate_real_mode.ps1
@@ -480,12 +532,35 @@ http://localhost:5173/dashboard
 Esta validacion revisa scripts, perfil `real` de Docker Compose y ausencia de
 passwords de VPS en `.env.example`.
 
+### Flujo REAL resumido
+
+Primera vez:
+
+```powershell
+.\scripts\setup_vps.ps1
+.\scripts\setup_real.ps1
+.\scripts\sync_vps_logs.ps1 -RunPipeline
+```
+
+Uso diario:
+
+```powershell
+.\scripts\setup_real.ps1 -NoBuild
+.\scripts\run_real_sync.ps1
+```
+
 ## Procesar cowrie.json manualmente
 
 La ejecucion normal del flujo completo se hace desde n8n:
 
 ```powershell
 .\scripts\run_n8n_pipeline.ps1
+```
+
+En modo REAL:
+
+```powershell
+.\scripts\run_n8n_pipeline.ps1 -Profile real
 ```
 
 Este comando queda como mecanismo de recuperacion manual:
@@ -585,6 +660,11 @@ scripts/validate_failure_recovery.ps1
 scripts/validate_sessions.ps1
 scripts/run_demo.ps1
 scripts/run_n8n_pipeline.ps1
+scripts/setup_real.ps1
+scripts/setup_vps.ps1
+scripts/sync_vps_logs.ps1
+scripts/run_real_sync.ps1
+scripts/validate_real_mode.ps1
 scripts/smoke_test.ps1
 scripts/recalculate_risk_scores.ps1
 scripts/validate_risk_scores.ps1
