@@ -518,8 +518,8 @@ svg {
 .mttd-panel {
   margin-top: 18px;
   padding: 20px 24px;
-  background: #202427;
-  border-left: 5px solid #087e8b;
+  background: #fff;
+  border: 1px solid #dce1e4;
 }
 
 .mttd-panel .panel-heading {
@@ -539,21 +539,21 @@ svg {
   align-items: flex-start;
   gap: 4px;
   padding: 12px 14px;
-  background: #2a2e33;
+  background: #f4f6f7;
   border-radius: 4px;
 }
 
 .mttd-stat svg {
-  color: #7bd3db;
+  color: #087e8b;
 }
 
 .mttd-stat span {
-  color: #aeb8bd;
+  color: #68747a;
   font-size: 0.72rem;
 }
 
 .mttd-stat strong {
-  color: #fff;
+  color: #202427;
   font-size: 1.15rem;
   font-variant-numeric: tabular-nums;
 }
@@ -563,29 +563,29 @@ svg {
 }
 
 .mttd-stat--warning strong {
-  color: #f2a900;
+  color: #c47a00;
 }
 
 .mttd-trigger-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
-  color: #dce1e4;
+  color: #202427;
 }
 
 .mttd-trigger-table th {
   text-align: left;
   padding: 8px 10px;
-  color: #aeb8bd;
+  color: #68747a;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border-bottom: 1px solid #2a2e33;
+  border-bottom: 1px solid #e2e6e9;
 }
 
 .mttd-trigger-table td {
   padding: 10px 10px;
-  border-bottom: 1px solid #2a2e33;
+  border-bottom: 1px solid #e2e6e9;
   font-variant-numeric: tabular-nums;
 }
 
@@ -594,13 +594,13 @@ svg {
 }
 
 .mttd-empty {
-  color: #aeb8bd;
+  color: #68747a;
   font-size: 0.85rem;
   margin-top: 10px;
 }
 
 .mttd-empty code {
-  background: #2a2e33;
+  background: #f4f6f7;
   padding: 1px 5px;
   border-radius: 3px;
   font-size: 0.8rem;
@@ -613,8 +613,8 @@ svg {
 .geo-panel {
   margin-top: 18px;
   padding: 20px 24px;
-  background: #202427;
-  border-left: 5px solid #2d6a4f;
+  background: #fff;
+  border: 1px solid #dce1e4;
 }
 
 .geo-panel .panel-heading {
@@ -625,7 +625,7 @@ svg {
 }
 
 .geo-globe-icon {
-  color: #52b788;
+  color: #087e8b;
   flex-shrink: 0;
 }
 
@@ -641,18 +641,18 @@ svg {
   flex-direction: column;
   gap: 4px;
   padding: 12px 16px;
-  background: #2a2e33;
+  background: #f4f6f7;
   border-radius: 4px;
   min-width: 120px;
 }
 
 .geo-stat span {
-  color: #aeb8bd;
+  color: #68747a;
   font-size: 0.72rem;
 }
 
 .geo-stat strong {
-  color: #fff;
+  color: #202427;
   font-size: 1.15rem;
   font-variant-numeric: tabular-nums;
 }
@@ -661,22 +661,22 @@ svg {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
-  color: #dce1e4;
+  color: #202427;
 }
 
 .geo-country-table th {
   text-align: left;
   padding: 8px 10px;
-  color: #aeb8bd;
+  color: #68747a;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border-bottom: 1px solid #2a2e33;
+  border-bottom: 1px solid #e2e6e9;
 }
 
 .geo-country-table td {
   padding: 9px 10px;
-  border-bottom: 1px solid #2a2e33;
+  border-bottom: 1px solid #e2e6e9;
   font-variant-numeric: tabular-nums;
 }
 
@@ -689,7 +689,7 @@ svg {
 }
 
 .geo-empty {
-  color: #aeb8bd;
+  color: #68747a;
   font-size: 0.85rem;
   margin-top: 10px;
   line-height: 1.6;
