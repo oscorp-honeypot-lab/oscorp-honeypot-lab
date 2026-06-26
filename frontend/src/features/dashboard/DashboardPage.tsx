@@ -2,14 +2,17 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
+  AlertTriangle,
   Clock3,
   Download,
   RefreshCw,
   Server,
   ShieldAlert,
+  Timer,
   Users,
 } from "lucide-react";
-import { getSummary, getTimeline } from "../../api/client";
+import { getMttdStats, getSummary, getTimeline } from "../../api/client";
+import type { MttdTriggerStatResponse } from "../../api/generated/types.gen";
 import { EChart } from "./EChart";
 import { riskOption, timelineOption } from "./chartOptions";
 
@@ -25,6 +28,11 @@ export function DashboardPage() {
   const timeline = useQuery({
     queryKey: ["analytics", "timeline", hours],
     queryFn: () => getTimeline(hours),
+    refetchInterval: 60_000,
+  });
+  const mttd = useQuery({
+    queryKey: ["analytics", "mttd"],
+    queryFn: getMttdStats,
     refetchInterval: 60_000,
   });
 
@@ -162,6 +170,8 @@ export function DashboardPage() {
           </strong>
         </div>
       </section>
+
+      {mttd.data && <MttdPanel stats={mttd.data} />}
     </div>
   );
 }
@@ -183,6 +193,112 @@ function Metric({
         <strong>{value}</strong>
       </div>
     </article>
+  );
+}
+
+const TRIGGER_LABELS: Record<string, string> = {
+  high_risk: "Alto riesgo",
+  successful_login: "Login exitoso",
+  file_download: "Descarga",
+};
+
+function fmt(seconds: number | null | undefined): string {
+  if (seconds == null) return "—";
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  return `${(seconds / 3600).toFixed(1)}h`;
+}
+
+function MttdPanel({
+  stats,
+}: {
+  stats: {
+    avg_seconds: number | null;
+    min_seconds: number | null;
+    max_seconds: number | null;
+    p95_seconds: number | null;
+    total_sent: number;
+    total_failed: number;
+    total_pending: number;
+    failure_rate: number;
+    by_trigger: MttdTriggerStatResponse[];
+  };
+}) {
+  const failurePct = (stats.failure_rate * 100).toFixed(1);
+  return (
+    <section className="mttd-panel" aria-label="MTTD — Tiempo medio de detección">
+      <div className="panel-heading">
+        <div>
+          <p className="section-label">Alertas Telegram</p>
+          <h2>Tiempo medio de detección (MTTD)</h2>
+        </div>
+      </div>
+
+      <div className="mttd-stats-grid">
+        <div className="mttd-stat">
+          <Timer aria-hidden="true" size={18} />
+          <span>Promedio</span>
+          <strong>{fmt(stats.avg_seconds)}</strong>
+        </div>
+        <div className="mttd-stat">
+          <Timer aria-hidden="true" size={18} />
+          <span>Mínimo</span>
+          <strong>{fmt(stats.min_seconds)}</strong>
+        </div>
+        <div className="mttd-stat">
+          <Timer aria-hidden="true" size={18} />
+          <span>Máximo</span>
+          <strong>{fmt(stats.max_seconds)}</strong>
+        </div>
+        <div className="mttd-stat">
+          <Timer aria-hidden="true" size={18} />
+          <span>Percentil 95</span>
+          <strong>{fmt(stats.p95_seconds)}</strong>
+        </div>
+        <div className="mttd-stat">
+          <Activity aria-hidden="true" size={18} />
+          <span>Enviadas</span>
+          <strong>{number.format(stats.total_sent)}</strong>
+        </div>
+        <div className="mttd-stat mttd-stat--warning">
+          <AlertTriangle aria-hidden="true" size={18} />
+          <span>Tasa de fallo</span>
+          <strong>{failurePct}%</strong>
+        </div>
+      </div>
+
+      {stats.by_trigger.length > 0 && (
+        <table className="mttd-trigger-table" aria-label="MTTD por tipo de evento">
+          <thead>
+            <tr>
+              <th>Tipo de evento</th>
+              <th>Promedio</th>
+              <th>Mínimo</th>
+              <th>Máximo</th>
+              <th>Alertas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stats.by_trigger.map((t) => (
+              <tr key={t.trigger}>
+                <td>{TRIGGER_LABELS[t.trigger] ?? t.trigger}</td>
+                <td>{fmt(t.avg_seconds)}</td>
+                <td>{fmt(t.min_seconds)}</td>
+                <td>{fmt(t.max_seconds)}</td>
+                <td>{number.format(t.count)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {stats.total_sent === 0 && (
+        <p className="mttd-empty">
+          Sin alertas enviadas aún. Configurá <code>TELEGRAM_BOT_TOKEN</code> y{" "}
+          <code>TELEGRAM_CHAT_ID</code> para activar el envío.
+        </p>
+      )}
+    </section>
   );
 }
 

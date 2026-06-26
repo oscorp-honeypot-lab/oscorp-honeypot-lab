@@ -13,6 +13,8 @@ from app.domain.analytics import (
     DownloadItem,
     EventFilters,
     EventListItem,
+    MttdStats,
+    MttdTriggerStat,
     Page,
     RiskScore,
     SessionDetail,
@@ -748,6 +750,69 @@ class PostgresAnalyticsRepository:
                 for row in result
             )
         return Page(items=items, page=page, page_size=page_size, total=total)
+
+    async def get_mttd_stats(self) -> MttdStats:
+        async with self._session_factory() as session:
+            overall = await session.execute(
+                text("""
+                    SELECT
+                        AVG(mttd_seconds)                                           AS avg_seconds,
+                        MIN(mttd_seconds)                                           AS min_seconds,
+                        MAX(mttd_seconds)                                           AS max_seconds,
+                        PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY mttd_seconds) AS p95_seconds,
+                        COUNT(*) FILTER (WHERE status = 'sent')                     AS total_sent,
+                        COUNT(*) FILTER (WHERE status = 'failed')                   AS total_failed,
+                        COUNT(*) FILTER (WHERE status = 'pending')                  AS total_pending
+                    FROM alerts
+                """)
+            )
+            row = overall.one()
+            avg_s = float(row[0]) if row[0] is not None else None
+            min_s = float(row[1]) if row[1] is not None else None
+            max_s = float(row[2]) if row[2] is not None else None
+            p95_s = float(row[3]) if row[3] is not None else None
+            total_sent = int(row[4])
+            total_failed = int(row[5])
+            total_pending = int(row[6])
+            closed = total_sent + total_failed
+            failure_rate = round(total_failed / closed, 4) if closed > 0 else 0.0
+
+            trigger_result = await session.execute(
+                text("""
+                    SELECT
+                        trigger,
+                        AVG(mttd_seconds)  AS avg_seconds,
+                        MIN(mttd_seconds)  AS min_seconds,
+                        MAX(mttd_seconds)  AS max_seconds,
+                        COUNT(*)           AS count
+                    FROM alerts
+                    WHERE status = 'sent' AND mttd_seconds IS NOT NULL
+                    GROUP BY trigger
+                    ORDER BY trigger
+                """)
+            )
+            by_trigger = tuple(
+                MttdTriggerStat(
+                    trigger=str(tr[0]),
+                    avg_seconds=float(tr[1]),
+                    min_seconds=float(tr[2]),
+                    max_seconds=float(tr[3]),
+                    count=int(tr[4]),
+                )
+                for tr in trigger_result
+            )
+
+        return MttdStats(
+            avg_seconds=avg_s,
+            min_seconds=min_s,
+            max_seconds=max_s,
+            p95_seconds=p95_s,
+            total_sent=total_sent,
+            total_failed=total_failed,
+            total_pending=total_pending,
+            failure_rate=failure_rate,
+            by_trigger=by_trigger,
+        )
 
     async def fail_export(
         self,

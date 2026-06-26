@@ -5,6 +5,7 @@ from app.domain.analytics import (
     AnalyticsSummary,
     EventFilters,
     EventListItem,
+    MttdStats,
     Page,
     SessionDetail,
     SessionFilters,
@@ -70,6 +71,9 @@ class AnalyticsService:
         if detail is None:
             raise SessionNotFound
         return detail
+
+    async def get_mttd_stats(self) -> MttdStats:
+        return await self._repository.get_mttd_stats()
 
     async def list_alerts(
         self,

@@ -129,6 +129,28 @@ class SessionDetail:
 
 
 @dataclass(frozen=True, slots=True)
+class MttdTriggerStat:
+    trigger: str
+    avg_seconds: float
+    min_seconds: float
+    max_seconds: float
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
+class MttdStats:
+    avg_seconds: float | None
+    min_seconds: float | None
+    max_seconds: float | None
+    p95_seconds: float | None
+    total_sent: int
+    total_failed: int
+    total_pending: int
+    failure_rate: float
+    by_trigger: tuple[MttdTriggerStat, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class AlertItem:
     id: UUID
     session_key: str

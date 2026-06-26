@@ -8,6 +8,7 @@ from app.domain.analytics import (
     AnalyticsSummary,
     EventFilters,
     EventListItem,
+    MttdStats,
     Page,
     SessionDetail,
     SessionFilters,
@@ -44,6 +45,8 @@ class AnalyticsRepository(Protocol):
         session_key: str,
         rules_version: str,
     ) -> SessionDetail | None: ...
+
+    async def get_mttd_stats(self) -> MttdStats: ...
 
     async def list_alerts(
         self,

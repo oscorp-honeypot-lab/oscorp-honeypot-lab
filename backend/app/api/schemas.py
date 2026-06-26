@@ -10,6 +10,8 @@ from app.domain.analytics import (
     AlertItem,
     AnalyticsSummary,
     EventListItem,
+    MttdStats,
+    MttdTriggerStat,
     Page,
     SessionDetail,
     SessionListItem,
@@ -243,6 +245,44 @@ class SessionDetailResponse(BaseModel):
 
 class SessionReviewRequest(BaseModel):
     reviewed: bool
+
+
+class MttdTriggerStatResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    trigger: str
+    avg_seconds: float
+    min_seconds: float
+    max_seconds: float
+    count: int
+
+
+class MttdStatsResponse(BaseModel):
+    avg_seconds: float | None
+    min_seconds: float | None
+    max_seconds: float | None
+    p95_seconds: float | None
+    total_sent: int
+    total_failed: int
+    total_pending: int
+    failure_rate: float
+    by_trigger: tuple[MttdTriggerStatResponse, ...]
+
+    @classmethod
+    def from_domain(cls, stats: MttdStats) -> "MttdStatsResponse":
+        return cls(
+            avg_seconds=stats.avg_seconds,
+            min_seconds=stats.min_seconds,
+            max_seconds=stats.max_seconds,
+            p95_seconds=stats.p95_seconds,
+            total_sent=stats.total_sent,
+            total_failed=stats.total_failed,
+            total_pending=stats.total_pending,
+            failure_rate=stats.failure_rate,
+            by_trigger=tuple(
+                MttdTriggerStatResponse.model_validate(t) for t in stats.by_trigger
+            ),
+        )
 
 
 class AlertItemResponse(BaseModel):

@@ -1122,10 +1122,22 @@ Evidencia: docs/evidencias/fase24_telegram_alertas.md
 
 Objetivo: reemplazar la estimación teórica por métricas evento-alerta.
 
-- [ ] Calcular `alert_sent_timestamp - event_timestamp`.
-- [ ] Obtener promedio, mínimo, máximo y percentil 95.
-- [ ] Calcular latencia por tipo de evento y porcentaje de fallos.
-- [ ] Exponer las métricas en API y dashboard.
+```text
+[x] MttdTriggerStat y MttdStats en domain/analytics.py.
+[x] PERCENTILE_CONT(0.95) + AVG + MIN + MAX sobre mttd_seconds en SQL.
+[x] failure_rate = total_failed / (total_sent + total_failed).
+[x] Breakdown por trigger (GROUP BY trigger, ordered-set aggregate).
+[x] GET /api/v1/analytics/mttd → MttdStatsResponse (requiere VIEWER).
+[x] Panel MttdPanel en DashboardPage.tsx: 6 métricas + tabla breakdown.
+[x] SDK regenerado con openapi-ts desde el container frontend.
+[x] 8 tests nuevos (4 unit + 4 integration) → 38 backend totales.
+[x] TypeScript sin errores (tsc --noEmit).
+Evidencia: docs/evidencias/fase25_mttd_real.md
+
+Resultados reales (LAB):
+  MTTD promedio: ~21 min | mínimo: 16s | máximo: ~4h | p95: ~70 min
+  46 alertas sent | 1 failed (http_429) | failure_rate: 2.13%
+```
 
 ## Fase 26 — Enriquecimiento geográfico de IPs
 

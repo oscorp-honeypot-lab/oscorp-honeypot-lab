@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AdminCheckApiV1AuthAdminGetData, AdminCheckApiV1AuthAdminGetResponses, AnalystCheckApiV1AuthAnalystGetData, AnalystCheckApiV1AuthAnalystGetResponses, CreateUserApiV1UsersPostData, CreateUserApiV1UsersPostErrors, CreateUserApiV1UsersPostResponses, EventsApiV1EventsGetData, EventsApiV1EventsGetErrors, EventsApiV1EventsGetResponses, EventsCsvApiV1ExportsEventsCsvGetData, EventsCsvApiV1ExportsEventsCsvGetErrors, EventsCsvApiV1ExportsEventsCsvGetResponses, LiveApiV1HealthLiveGetData, LiveApiV1HealthLiveGetResponses, LoginApiV1AuthLoginPostData, LoginApiV1AuthLoginPostErrors, LoginApiV1AuthLoginPostResponses, LogoutApiV1AuthLogoutPostData, LogoutApiV1AuthLogoutPostErrors, LogoutApiV1AuthLogoutPostResponses, MeApiV1AuthMeGetData, MeApiV1AuthMeGetResponses, ReadyApiV1HealthReadyGetData, ReadyApiV1HealthReadyGetErrors, ReadyApiV1HealthReadyGetResponses, ReviewSessionApiV1SessionsSessionKeyReviewPatchData, ReviewSessionApiV1SessionsSessionKeyReviewPatchErrors, ReviewSessionApiV1SessionsSessionKeyReviewPatchResponses, SessionDetailApiV1SessionsSessionKeyGetData, SessionDetailApiV1SessionsSessionKeyGetErrors, SessionDetailApiV1SessionsSessionKeyGetResponses, SessionsApiV1SessionsGetData, SessionsApiV1SessionsGetErrors, SessionsApiV1SessionsGetResponses, SessionsCsvApiV1ExportsSessionsCsvGetData, SessionsCsvApiV1ExportsSessionsCsvGetErrors, SessionsCsvApiV1ExportsSessionsCsvGetResponses, SummaryApiV1AnalyticsSummaryGetData, SummaryApiV1AnalyticsSummaryGetResponses, TimelineApiV1AnalyticsTimelineGetData, TimelineApiV1AnalyticsTimelineGetErrors, TimelineApiV1AnalyticsTimelineGetResponses } from './types.gen';
+import type { AdminCheckApiV1AuthAdminGetData, AdminCheckApiV1AuthAdminGetResponses, AnalystCheckApiV1AuthAnalystGetData, AnalystCheckApiV1AuthAnalystGetResponses, CreateUserApiV1UsersPostData, CreateUserApiV1UsersPostErrors, CreateUserApiV1UsersPostResponses, EventsApiV1EventsGetData, EventsApiV1EventsGetErrors, EventsApiV1EventsGetResponses, EventsCsvApiV1ExportsEventsCsvGetData, EventsCsvApiV1ExportsEventsCsvGetErrors, EventsCsvApiV1ExportsEventsCsvGetResponses, ListAlertsApiV1AlertsGetData, ListAlertsApiV1AlertsGetErrors, ListAlertsApiV1AlertsGetResponses, LiveApiV1HealthLiveGetData, LiveApiV1HealthLiveGetResponses, LoginApiV1AuthLoginPostData, LoginApiV1AuthLoginPostErrors, LoginApiV1AuthLoginPostResponses, LogoutApiV1AuthLogoutPostData, LogoutApiV1AuthLogoutPostErrors, LogoutApiV1AuthLogoutPostResponses, MeApiV1AuthMeGetData, MeApiV1AuthMeGetResponses, MttdStatsApiV1AnalyticsMttdGetData, MttdStatsApiV1AnalyticsMttdGetResponses, ReadyApiV1HealthReadyGetData, ReadyApiV1HealthReadyGetErrors, ReadyApiV1HealthReadyGetResponses, ReviewSessionApiV1SessionsSessionKeyReviewPatchData, ReviewSessionApiV1SessionsSessionKeyReviewPatchErrors, ReviewSessionApiV1SessionsSessionKeyReviewPatchResponses, SessionDetailApiV1SessionsSessionKeyGetData, SessionDetailApiV1SessionsSessionKeyGetErrors, SessionDetailApiV1SessionsSessionKeyGetResponses, SessionsApiV1SessionsGetData, SessionsApiV1SessionsGetErrors, SessionsApiV1SessionsGetResponses, SessionsCsvApiV1ExportsSessionsCsvGetData, SessionsCsvApiV1ExportsSessionsCsvGetErrors, SessionsCsvApiV1ExportsSessionsCsvGetResponses, SummaryApiV1AnalyticsSummaryGetData, SummaryApiV1AnalyticsSummaryGetResponses, TimelineApiV1AnalyticsTimelineGetData, TimelineApiV1AnalyticsTimelineGetErrors, TimelineApiV1AnalyticsTimelineGetResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -83,6 +83,11 @@ export const summaryApiV1AnalyticsSummaryGet = <ThrowOnError extends boolean = f
 export const timelineApiV1AnalyticsTimelineGet = <ThrowOnError extends boolean = false>(options?: Options<TimelineApiV1AnalyticsTimelineGetData, ThrowOnError>): RequestResult<TimelineApiV1AnalyticsTimelineGetResponses, TimelineApiV1AnalyticsTimelineGetErrors, ThrowOnError> => (options?.client ?? client).get<TimelineApiV1AnalyticsTimelineGetResponses, TimelineApiV1AnalyticsTimelineGetErrors, ThrowOnError>({ url: '/api/v1/analytics/timeline', ...options });
 
 /**
+ * Mttd Stats
+ */
+export const mttdStatsApiV1AnalyticsMttdGet = <ThrowOnError extends boolean = false>(options?: Options<MttdStatsApiV1AnalyticsMttdGetData, ThrowOnError>): RequestResult<MttdStatsApiV1AnalyticsMttdGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<MttdStatsApiV1AnalyticsMttdGetResponses, unknown, ThrowOnError>({ url: '/api/v1/analytics/mttd', ...options });
+
+/**
  * Sessions
  */
 export const sessionsApiV1SessionsGet = <ThrowOnError extends boolean = false>(options?: Options<SessionsApiV1SessionsGetData, ThrowOnError>): RequestResult<SessionsApiV1SessionsGetResponses, SessionsApiV1SessionsGetErrors, ThrowOnError> => (options?.client ?? client).get<SessionsApiV1SessionsGetResponses, SessionsApiV1SessionsGetErrors, ThrowOnError>({ url: '/api/v1/sessions', ...options });
@@ -108,6 +113,11 @@ export const reviewSessionApiV1SessionsSessionKeyReviewPatch = <ThrowOnError ext
         ...options.headers
     }
 });
+
+/**
+ * List Alerts
+ */
+export const listAlertsApiV1AlertsGet = <ThrowOnError extends boolean = false>(options?: Options<ListAlertsApiV1AlertsGetData, ThrowOnError>): RequestResult<ListAlertsApiV1AlertsGetResponses, ListAlertsApiV1AlertsGetErrors, ThrowOnError> => (options?.client ?? client).get<ListAlertsApiV1AlertsGetResponses, ListAlertsApiV1AlertsGetErrors, ThrowOnError>({ url: '/api/v1/alerts', ...options });
 
 /**
  * Sessions Csv

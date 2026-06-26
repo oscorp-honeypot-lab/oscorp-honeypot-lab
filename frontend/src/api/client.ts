@@ -2,6 +2,7 @@ import {
   loginApiV1AuthLoginPost,
   logoutApiV1AuthLogoutPost,
   meApiV1AuthMeGet,
+  mttdStatsApiV1AnalyticsMttdGet,
   reviewSessionApiV1SessionsSessionKeyReviewPatch,
   sessionDetailApiV1SessionsSessionKeyGet,
   sessionsApiV1SessionsGet,
@@ -12,6 +13,7 @@ import { client } from "./generated/client.gen";
 import type {
   AnalyticsSummaryResponse,
   LoginRequestWritable,
+  MttdStatsResponse,
   SessionDetailResponse,
   SessionListItemResponse,
   SessionPageResponse,
@@ -128,6 +130,10 @@ export async function reviewSession(
       headers: { "X-CSRF-Token": csrfToken() },
     }),
   );
+}
+
+export async function getMttdStats(): Promise<MttdStatsResponse> {
+  return unwrap(await mttdStatsApiV1AnalyticsMttdGet());
 }
 
 export async function getSessions(

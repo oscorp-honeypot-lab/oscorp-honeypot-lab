@@ -16,6 +16,7 @@ from app.api.dependencies import (
 from app.api.schemas import (
     AnalyticsSummaryResponse,
     EventPageResponse,
+    MttdStatsResponse,
     SessionDetailResponse,
     SessionListItemResponse,
     SessionPageResponse,
@@ -49,6 +50,12 @@ async def timeline(
 ) -> TimelineResponse:
     points = await service.timeline(hours=hours)
     return TimelineResponse.from_domain(hours=hours, points=points)
+
+
+@router.get("/analytics/mttd", response_model=MttdStatsResponse)
+async def mttd_stats(_: Viewer, service: Service) -> MttdStatsResponse:
+    stats = await service.get_mttd_stats()
+    return MttdStatsResponse.from_domain(stats)
 
 
 @router.get("/sessions", response_model=SessionPageResponse)
