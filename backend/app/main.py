@@ -24,6 +24,7 @@ from app.application.auth_service import AuthService
 from app.application.analytics_service import AnalyticsService
 from app.application.export_service import ExportService
 from app.application.health_service import HealthService
+from app.application.lab_service import LabService
 from app.application.report_service import ReportService
 from app.infrastructure.config import get_settings
 from app.infrastructure.database import create_engine, create_session_factory
@@ -70,6 +71,12 @@ async def lifespan(app: FastAPI):
             bot_token=settings.telegram_bot_token,
             chat_id=settings.telegram_chat_id,
         ),
+    )
+    app.state.lab_service = LabService(
+        analytics_repository,
+        environment=settings.environment,
+        lab_runner_url=settings.lab_runner_url,
+        pipeline_worker_url=settings.pipeline_worker_url,
     )
     app.state.settings = settings
     logger.info("api_started", environment=settings.environment)

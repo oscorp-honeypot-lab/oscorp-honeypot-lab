@@ -54,7 +54,7 @@ Assert-LastExitCode "PostgreSQL no acepta conexiones."
 
 $migration = (& docker compose exec -T postgres psql -U oscorp -d oscorp -Atc "SELECT version_num FROM alembic_version;").Trim()
 Assert-LastExitCode "No se pudo consultar la migración Alembic."
-if ($migration -ne "0014_report_deliveries") {
+if ($migration -ne "0015_lab_runs") {
     throw "Versión de migración inesperada: $migration"
 }
 

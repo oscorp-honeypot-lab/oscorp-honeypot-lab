@@ -15,6 +15,7 @@ from app.domain.analytics import (
     EventListItem,
     GeoCountryStat,
     GeoStats,
+    LabRun,
     MttdStats,
     MttdTriggerStat,
     Page,
@@ -1034,3 +1035,124 @@ class PostgresAnalyticsRepository:
                     "error_detail": error_detail[:2048] if error_detail else None,
                 },
             )
+
+    @staticmethod
+    def _lab_run_item(row: Any) -> LabRun:
+        return LabRun(
+            id=int(row[0]),
+            scenario=str(row[1]),
+            status=str(row[2]),
+            actor=str(row[3]),
+            started_at=row[4],
+            finished_at=row[5],
+            exit_code=int(row[6]) if row[6] is not None else None,
+            log_text=str(row[7]) if row[7] is not None else None,
+            error_detail=str(row[8]) if row[8] is not None else None,
+            pipeline_events_read=int(row[9]) if row[9] is not None else None,
+            pipeline_errors=int(row[10]) if row[10] is not None else None,
+        )
+
+    _LAB_RUN_SELECT = """
+        SELECT id, scenario, status, actor, started_at, finished_at,
+               exit_code, log_text, error_detail,
+               pipeline_events_read, pipeline_errors
+        FROM lab_runs
+    """
+
+    async def create_lab_run(self, *, scenario: str, actor: str) -> LabRun:
+        async with self._session_factory.begin() as session:
+            result = await session.execute(
+                text(
+                    """
+                    INSERT INTO lab_runs (scenario, status, actor)
+                    VALUES (:scenario, 'queued', :actor)
+                    RETURNING id, scenario, status, actor, started_at, finished_at,
+                              exit_code, log_text, error_detail,
+                              pipeline_events_read, pipeline_errors
+                    """
+                ),
+                {"scenario": scenario, "actor": actor},
+            )
+            row = result.one()
+        return self._lab_run_item(row)
+
+    async def update_lab_run(
+        self,
+        *,
+        run_id: int,
+        status: str,
+        log_text: str | None = None,
+        error_detail: str | None = None,
+        exit_code: int | None = None,
+        pipeline_events_read: int | None = None,
+        pipeline_errors: int | None = None,
+        set_finished: bool = False,
+    ) -> None:
+        async with self._session_factory.begin() as session:
+            await session.execute(
+                text(
+                    """
+                    UPDATE lab_runs
+                    SET
+                        status = :status,
+                        log_text = :log_text,
+                        error_detail = :error_detail,
+                        exit_code = :exit_code,
+                        pipeline_events_read = :pipeline_events_read,
+                        pipeline_errors = :pipeline_errors,
+                        finished_at = CASE
+                            WHEN :set_finished THEN NOW()
+                            ELSE finished_at
+                        END
+                    WHERE id = :run_id
+                    """
+                ),
+                {
+                    "run_id": run_id,
+                    "status": status,
+                    "log_text": log_text[:50_000] if log_text else None,
+                    "error_detail": error_detail[:2048] if error_detail else None,
+                    "exit_code": exit_code,
+                    "pipeline_events_read": pipeline_events_read,
+                    "pipeline_errors": pipeline_errors,
+                    "set_finished": set_finished,
+                },
+            )
+
+    async def get_active_lab_run(self) -> LabRun | None:
+        async with self._session_factory() as session:
+            result = await session.execute(
+                text(
+                    self._LAB_RUN_SELECT
+                    + """
+                    WHERE status IN ('queued', 'running', 'processing')
+                    ORDER BY started_at DESC
+                    LIMIT 1
+                    """
+                )
+            )
+            row = result.first()
+        return self._lab_run_item(row) if row is not None else None
+
+    async def get_latest_lab_run(self) -> LabRun | None:
+        async with self._session_factory() as session:
+            result = await session.execute(
+                text(
+                    self._LAB_RUN_SELECT
+                    + """
+                    ORDER BY started_at DESC
+                    LIMIT 1
+                    """
+                )
+            )
+            row = result.first()
+        return self._lab_run_item(row) if row is not None else None
+
+    async def get_lab_run(self, *, run_id: int) -> LabRun | None:
+        async with self._session_factory() as session:
+            result = await session.execute(
+                text(self._LAB_RUN_SELECT + " WHERE id = :run_id"),
+                {"run_id": run_id},
+            )
+            row = result.first()
+        return self._lab_run_item(row) if row is not None else None

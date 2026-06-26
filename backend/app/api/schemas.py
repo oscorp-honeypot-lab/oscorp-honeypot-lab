@@ -12,6 +12,7 @@ from app.domain.analytics import (
     EventListItem,
     GeoCountryStat,
     GeoStats,
+    LabRun,
     MttdStats,
     MttdTriggerStat,
     Page,
@@ -415,4 +416,38 @@ class ReportDeliveryResponse(BaseModel):
             status=delivery.status,
             filename=delivery.filename,
             error_code=delivery.error_code,
+        )
+
+
+class LabRunRequest(BaseModel):
+    scenario: str = Field(min_length=1, max_length=64)
+
+
+class LabRunResponse(BaseModel):
+    id: int
+    scenario: str
+    status: str
+    actor: str
+    started_at: datetime
+    finished_at: datetime | None
+    exit_code: int | None
+    log_text: str | None
+    error_detail: str | None
+    pipeline_events_read: int | None
+    pipeline_errors: int | None
+
+    @classmethod
+    def from_domain(cls, run: LabRun) -> "LabRunResponse":
+        return cls(
+            id=run.id,
+            scenario=run.scenario,
+            status=run.status,
+            actor=run.actor,
+            started_at=run.started_at,
+            finished_at=run.finished_at,
+            exit_code=run.exit_code,
+            log_text=run.log_text,
+            error_detail=run.error_detail,
+            pipeline_events_read=run.pipeline_events_read,
+            pipeline_errors=run.pipeline_errors,
         )

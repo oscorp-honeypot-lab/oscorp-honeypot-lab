@@ -47,6 +47,20 @@ export type SessionQuery = {
 export type ReportPeriodType = "daily" | "weekly";
 export type ReportFormat = "html" | "csv";
 
+export type LabRunResponse = {
+  id: number;
+  scenario: string;
+  status: string;
+  actor: string;
+  started_at: string;
+  finished_at: string | null;
+  exit_code: number | null;
+  log_text: string | null;
+  error_detail: string | null;
+  pipeline_events_read: number | null;
+  pipeline_errors: number | null;
+};
+
 export type ReportDeliveryResponse = {
   id: string;
   report_id: string;
@@ -223,4 +237,33 @@ export async function sendLatestReportTelegram(
     throw new ApiError("report_telegram_failed", response.status);
   }
   return (await response.json()) as ReportDeliveryResponse;
+}
+
+export async function getLabStatus(): Promise<LabRunResponse | null> {
+  const response = await fetch("/api/v1/lab/status", {
+    credentials: "include",
+  });
+  if (response.status === 204) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new ApiError("lab_status_failed", response.status);
+  }
+  return (await response.json()) as LabRunResponse;
+}
+
+export async function startLabRun(scenario: string): Promise<LabRunResponse> {
+  const response = await fetch("/api/v1/lab/run", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrfToken(),
+    },
+    body: JSON.stringify({ scenario }),
+  });
+  if (!response.ok) {
+    throw new ApiError("lab_run_failed", response.status);
+  }
+  return (await response.json()) as LabRunResponse;
 }

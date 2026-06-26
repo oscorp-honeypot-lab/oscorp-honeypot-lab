@@ -1299,7 +1299,7 @@ LAB: `scripts/configure_kibana_phase33.ps1` crea el índice analítico
 analítico con riesgo + mapa, exporta objetos versionados e importa el NDJSON
 en un space limpio temporal para validación.
 
-## Fase 33.5 — Consola LAB de simulaciones desde la app
+## Fase 33.5 — Consola LAB de simulaciones desde la app ✅
 
 Objetivo: convertir el LAB en una experiencia operable desde la aplicación web,
 sin requerir que el evaluador ejecute ataques y pipeline desde terminal.
@@ -1328,29 +1328,27 @@ full
 
 Restricciones de seguridad:
 
-- [ ] No ejecutar comandos arbitrarios enviados desde la web.
-- [ ] Usar allowlist estricta de escenarios conocidos.
-- [ ] Habilitar la funcionalidad solamente en `OSCORP_API_ENVIRONMENT=lab`.
-- [ ] Requerir rol `analyst` o `admin`.
-- [ ] Permitir una sola ejecución LAB concurrente.
-- [ ] No montar el Docker socket en el backend.
-- [ ] No exponer servicios internos del LAB fuera de la red Docker.
-- [ ] Registrar actor, escenario, timestamps, estado, exit code y resumen.
+- [x] No ejecutar comandos arbitrarios enviados desde la web.
+- [x] Usar allowlist estricta de escenarios conocidos.
+- [x] Habilitar la funcionalidad solamente en `OSCORP_API_ENVIRONMENT=lab`.
+- [x] Requerir rol `analyst` o `admin`.
+- [x] Permitir una sola ejecución LAB concurrente.
+- [x] No montar el Docker socket en el backend.
+- [x] No exponer servicios internos del LAB fuera de la red Docker.
+- [x] Registrar actor, escenario, timestamps, estado, exit code y resumen.
 
-Diseño técnico propuesto:
+Diseño técnico implementado:
 
-- [ ] Crear tabla `lab_runs` para historial de ejecuciones.
-- [ ] Crear API backend para iniciar ejecución, consultar estado y leer logs.
-- [ ] Crear un `lab-runner` interno o adaptar `attacker-sim` con una API
-      privada mínima.
-- [ ] Ejecutar `./run_scenario.sh <scenario>` dentro del entorno LAB, capturando
+- [x] Crear tabla `lab_runs` para historial de ejecuciones (`0015_lab_runs`).
+- [x] Crear API backend para iniciar ejecución, consultar estado y leer logs.
+- [x] Adaptar `attacker-sim` con `lab_runner.py` (HTTP server stdlib en puerto 8888).
+- [x] Ejecutar `./run_scenario.sh <scenario>` dentro del entorno LAB, capturando
       stdout/stderr.
-- [ ] Al finalizar el ataque, llamar a `pipeline-worker /runs` en modo
+- [x] Al finalizar el ataque, llamar a `pipeline-worker /runs` en modo
       incremental.
-- [ ] Persistir logs por ejecución con límite de tamaño para evitar crecimiento
-      indefinido.
-- [ ] Exponer consola en vivo mediante polling o SSE.
-- [ ] Invalidar/refrescar consultas de dashboard, sesiones, detalle y alertas al
+- [x] Persistir logs por ejecución con límite de tamaño (50KB).
+- [x] Exponer consola en vivo mediante polling (GET /lab/status cada 2s).
+- [x] Invalidar/refrescar consultas de dashboard, sesiones, detalle y alertas al
       finalizar.
 
 Pantalla web esperada:
@@ -1375,16 +1373,27 @@ Terminal:
 
 Validación requerida:
 
-- [ ] Ejecutar cada escenario desde la app.
-- [ ] Confirmar eventos nuevos en PostgreSQL y Elasticsearch.
-- [ ] Confirmar actualización automática del dashboard y tabla de sesiones.
-- [ ] Confirmar alertas Telegram cuando corresponda.
-- [ ] Verificar bloqueo de concurrencia.
-- [ ] Verificar permisos por rol.
-- [ ] Verificar que un escenario inválido sea rechazado.
-- [ ] Ejecutar pruebas backend/frontend/pipeline relevantes.
-- [ ] Ejecutar `.\scripts\validate_lab.ps1`.
-- [ ] Documentar evidencia en `docs/evidencias/`.
+- [x] Ejecutar cada escenario desde la app.
+- [x] Confirmar eventos nuevos en PostgreSQL y Elasticsearch.
+- [x] Confirmar actualización automática del dashboard y tabla de sesiones.
+- [x] Confirmar alertas Telegram cuando corresponda.
+- [x] Verificar bloqueo de concurrencia (test 409 en integration test).
+- [x] Verificar permisos por rol (test viewer rechazado en integration test).
+- [x] Verificar que un escenario inválido sea rechazado (test 400 en integration test).
+- [x] Ejecutar pruebas backend/frontend/pipeline relevantes.
+- [x] Ejecutar `.\scripts\validate_lab.ps1`.
+- [x] Documentar evidencia en `docs/evidencias/`.
+
+Resultados:
+
+- Backend unit tests: 9/9 passed
+- Backend integration tests: 9/9 passed
+- Backend full suite: 76/76 passed
+- Frontend LabView tests: 11/11 passed
+- Frontend full suite: 23/23 passed
+- Migración `0015_lab_runs` aplicada exitosamente
+
+Evidencia: docs/evidencias/fase33_5_consola_lab.md
 
 Skills previstos:
 

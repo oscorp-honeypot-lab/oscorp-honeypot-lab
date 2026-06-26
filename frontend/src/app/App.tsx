@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
+import { LabPage } from "../features/lab/LabPage";
 import { SessionDetailPage } from "../features/sessions/SessionDetailPage";
 import { SessionsPage } from "../features/sessions/SessionsPage";
 import { AuthProvider } from "../features/auth/AuthProvider";
@@ -29,6 +30,7 @@ export function App() {
                   path="/sessions/:sessionKey"
                   element={<SessionDetailPage />}
                 />
+                <Route path="/lab" element={<LabPage />} />
               </Route>
             </Route>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

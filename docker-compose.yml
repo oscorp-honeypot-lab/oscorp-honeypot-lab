@@ -164,7 +164,17 @@ services:
     volumes:
       - ./attacker-sim:/app
     working_dir: /app
-    command: tail -f /dev/null
+    command: python3 /app/lab_runner.py
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "from urllib.request import urlopen; urlopen('http://localhost:8888/status', timeout=2).read()"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
     networks:
       - oscorp_net
     profiles:

@@ -232,3 +232,18 @@ class ReportDelivery:
     status: str
     filename: str | None
     error_code: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class LabRun:
+    id: int
+    scenario: str
+    status: str
+    actor: str
+    started_at: datetime
+    finished_at: datetime | None
+    exit_code: int | None
+    log_text: str | None
+    error_detail: str | None
+    pipeline_events_read: int | None
+    pipeline_errors: int | None

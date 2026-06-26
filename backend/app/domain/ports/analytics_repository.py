@@ -9,6 +9,7 @@ from app.domain.analytics import (
     EventFilters,
     EventListItem,
     GeoStats,
+    LabRun,
     MttdStats,
     Page,
     ReportRun,
@@ -125,3 +126,29 @@ class AnalyticsRepository(Protocol):
         error_code: str | None = None,
         error_detail: str | None = None,
     ) -> None: ...
+
+    async def create_lab_run(
+        self,
+        *,
+        scenario: str,
+        actor: str,
+    ) -> LabRun: ...
+
+    async def update_lab_run(
+        self,
+        *,
+        run_id: int,
+        status: str,
+        log_text: str | None = None,
+        error_detail: str | None = None,
+        exit_code: int | None = None,
+        pipeline_events_read: int | None = None,
+        pipeline_errors: int | None = None,
+        set_finished: bool = False,
+    ) -> None: ...
+
+    async def get_active_lab_run(self) -> LabRun | None: ...
+
+    async def get_latest_lab_run(self) -> LabRun | None: ...
+
+    async def get_lab_run(self, *, run_id: int) -> LabRun | None: ...

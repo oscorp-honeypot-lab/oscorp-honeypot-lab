@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     bash \
     netcat-openbsd \
+    python3 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -17,4 +18,4 @@ COPY . /app
 RUN chmod +x /app/run_scenario.sh || true
 RUN chmod +x /app/scenarios/*.sh || true
 
-CMD ["tail", "-f", "/dev/null"]
+CMD ["python3", "/app/lab_runner.py"]

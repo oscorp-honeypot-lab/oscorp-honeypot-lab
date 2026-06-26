@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     admin_password: str = Field(default="", repr=False)
     telegram_bot_token: str = Field(default="", repr=False)
     telegram_chat_id: str = Field(default="", repr=False)
+    lab_runner_url: str = "http://attacker-sim:8888"
+    pipeline_worker_url: str = "http://pipeline-worker:8080"
 
     @property
     def allowed_origins(self) -> list[str]:

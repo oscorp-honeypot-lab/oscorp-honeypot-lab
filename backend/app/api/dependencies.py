@@ -13,6 +13,7 @@ from app.application.auth_service import (
 from app.application.analytics_service import AnalyticsService
 from app.application.export_service import ExportService
 from app.application.health_service import HealthService
+from app.application.lab_service import LabService
 from app.application.report_service import ReportService
 from app.domain.identity import Role, UserIdentity
 
@@ -35,6 +36,10 @@ def get_export_service(request: Request) -> ExportService:
 
 def get_report_service(request: Request) -> ReportService:
     return request.app.state.report_service
+
+
+def get_lab_service(request: Request) -> LabService:
+    return request.app.state.lab_service
 
 
 def client_ip(request: Request) -> str:

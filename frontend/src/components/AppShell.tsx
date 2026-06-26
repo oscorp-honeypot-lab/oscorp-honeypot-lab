@@ -1,5 +1,6 @@
 import {
   Activity,
+  FlaskConical,
   Gauge,
   LogOut,
   ShieldCheck,
@@ -31,6 +32,10 @@ export function AppShell() {
           <NavLink to="/sessions">
             <Activity aria-hidden="true" />
             Sesiones
+          </NavLink>
+          <NavLink to="/lab">
+            <FlaskConical aria-hidden="true" />
+            Laboratorio
           </NavLink>
         </nav>
         <div className="sidebar-user">
