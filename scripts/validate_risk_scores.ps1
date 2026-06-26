@@ -14,7 +14,7 @@ $result = (& docker compose exec -T postgres psql -U oscorp -d oscorp -At -F "|"
 WITH invalid AS (
     SELECT COUNT(*) AS total
     FROM session_risk_scores
-    WHERE rules_version = '1.0.0'
+    WHERE rules_version = '1.1.0'
       AND (
           score NOT BETWEEN 0 AND 100
           OR risk_level <> CASE
@@ -34,7 +34,7 @@ counts AS (
         COUNT(*) FILTER (WHERE risk_level = 'high') AS high,
         COUNT(*) FILTER (WHERE risk_level = 'critical') AS critical
     FROM session_risk_scores
-    WHERE rules_version = '1.0.0'
+    WHERE rules_version = '1.1.0'
 )
 SELECT
     (SELECT COUNT(*) FROM sessions),
