@@ -8,6 +8,7 @@ from app.domain.analytics import (
     AnalyticsSummary,
     EventFilters,
     EventListItem,
+    GeoStats,
     MttdStats,
     Page,
     SessionDetail,
@@ -50,6 +51,8 @@ class AnalyticsRepository(Protocol):
     async def get_mttd_stats(self) -> MttdStats: ...
 
     async def get_vt_stats(self) -> VtStats: ...
+
+    async def get_geo_stats(self) -> GeoStats: ...
 
     async def list_alerts(
         self,

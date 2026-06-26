@@ -23,6 +23,7 @@ from alerts.dispatcher import dispatch_pending_alerts
 from alerts.storage import generate_session_alerts
 from alerts.telegram import TelegramAdapter
 from geo.adapter import IpApiAdapter
+from geo.elasticsearch import build_geo_lookup
 from geo.enricher import enrich_session_ips
 from risk.storage import recalculate_scores
 from vt.adapter import VirusTotalAdapter
@@ -409,30 +410,45 @@ def determine_read_position(
     )
 
 
+_GEO_POINT_MAPPING = {"src_location": {"type": "geo_point"}}
+
+
+def _update_index_geo_mapping(base_url: str, index: str) -> None:
+    """Add src_location geo_point to an existing index (idempotent)."""
+    req = request.Request(
+        f"{base_url.rstrip('/')}/{index}/_mapping",
+        data=json.dumps({"properties": _GEO_POINT_MAPPING}).encode("utf-8"),
+        method="PUT",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with request.urlopen(req, timeout=30):
+            pass
+    except (HTTPError, URLError):
+        pass
+
+
 def ensure_index(base_url: str, index: str) -> None:
-    mapping = {
-        "mappings": {
-            "properties": {
-                "event_hash": {"type": "keyword"},
-                "event_uuid": {"type": "keyword"},
-                "timestamp_evento": {"type": "date"},
-                "eventid": {"type": "keyword"},
-                "session_id": {"type": "keyword"},
-                "sensor": {"type": "keyword"},
-                "src_ip": {"type": "ip"},
-                "src_port": {"type": "integer"},
-                "username": {"type": "keyword"},
-                "password": {"type": "keyword"},
-                "command_input": {"type": "text"},
-                "url": {"type": "keyword"},
-                "shasum": {"type": "keyword"},
-                "raw_event": {"type": "object", "enabled": True},
-            }
-        }
+    properties = {
+        "event_hash": {"type": "keyword"},
+        "event_uuid": {"type": "keyword"},
+        "timestamp_evento": {"type": "date"},
+        "eventid": {"type": "keyword"},
+        "session_id": {"type": "keyword"},
+        "sensor": {"type": "keyword"},
+        "src_ip": {"type": "ip"},
+        "src_port": {"type": "integer"},
+        "username": {"type": "keyword"},
+        "password": {"type": "keyword"},
+        "command_input": {"type": "text"},
+        "url": {"type": "keyword"},
+        "shasum": {"type": "keyword"},
+        "raw_event": {"type": "object", "enabled": True},
+        **_GEO_POINT_MAPPING,
     }
     req = request.Request(
         f"{base_url.rstrip('/')}/{index}",
-        data=json.dumps(mapping).encode("utf-8"),
+        data=json.dumps({"mappings": {"properties": properties}}).encode("utf-8"),
         method="PUT",
         headers={"Content-Type": "application/json"},
     )
@@ -443,6 +459,7 @@ def ensure_index(base_url: str, index: str) -> None:
                 return
         except HTTPError as exc:
             if exc.code == 400:
+                _update_index_geo_mapping(base_url, index)
                 return
             last_error = exc
             if exc.code < 500 and exc.code != 429:
@@ -467,8 +484,10 @@ def index_events(
     base_url: str,
     index: str,
     events: list[dict[str, Any]],
+    geo_lookup: dict[str, dict[str, float]] | None = None,
 ) -> int:
     ensure_index(base_url, index)
+    lookup = geo_lookup or {}
     lines: list[str] = []
     for event in events:
         action = {"index": {"_index": index, "_id": event["event_hash"]}}
@@ -478,6 +497,9 @@ def index_events(
             if key not in {"raw_event", "raw_document"}
         }
         document["raw_event"] = event["raw_document"]
+        src_ip = event.get("src_ip")
+        if src_ip and src_ip in lookup:
+            document["src_location"] = lookup[src_ip]
         lines.append(json.dumps(action, separators=(",", ":")))
         lines.append(json.dumps(document, ensure_ascii=False, separators=(",", ":")))
 
@@ -1016,10 +1038,13 @@ def execute_pipeline(
                 dispatch_pending_alerts(connection, TelegramAdapter.from_env())
                 enrich_session_ips(connection, IpApiAdapter())
                 enrich_download_hashes(connection, VirusTotalAdapter())
+                src_ips = {e["src_ip"] for e in events if e.get("src_ip")}
+                geo_lookup = build_geo_lookup(connection, src_ips)
                 indexed = index_events(
                     elasticsearch_url,
                     elasticsearch_index,
                     events,
+                    geo_lookup=geo_lookup,
                 )
             save_event_errors(
                 connection,

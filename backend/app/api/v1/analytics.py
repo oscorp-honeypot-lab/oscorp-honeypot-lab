@@ -16,6 +16,7 @@ from app.api.dependencies import (
 from app.api.schemas import (
     AnalyticsSummaryResponse,
     EventPageResponse,
+    GeoStatsResponse,
     MttdStatsResponse,
     SessionDetailResponse,
     SessionListItemResponse,
@@ -63,6 +64,12 @@ async def mttd_stats(_: Viewer, service: Service) -> MttdStatsResponse:
 async def vt_stats(_: Viewer, service: Service) -> VtStatsResponse:
     stats = await service.get_vt_stats()
     return VtStatsResponse.from_domain(stats)
+
+
+@router.get("/analytics/geo-stats", response_model=GeoStatsResponse)
+async def geo_stats(_: Viewer, service: Service) -> GeoStatsResponse:
+    stats = await service.get_geo_stats()
+    return GeoStatsResponse.from_domain(stats)
 
 
 @router.get("/sessions", response_model=SessionPageResponse)

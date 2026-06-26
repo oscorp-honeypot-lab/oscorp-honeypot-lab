@@ -13,6 +13,8 @@ from app.domain.analytics import (
     DownloadItem,
     EventFilters,
     EventListItem,
+    GeoCountryStat,
+    GeoStats,
     MttdStats,
     MttdTriggerStat,
     Page,
@@ -842,6 +844,65 @@ class PostgresAnalyticsRepository:
             not_found=int(row[2]),
             error_count=int(row[3]),
             max_malicious=int(row[4]) if row[4] is not None else None,
+        )
+
+    async def get_geo_stats(self) -> GeoStats:
+        async with self._session_factory() as session:
+            totals_row = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            COUNT(DISTINCT s.session_key)
+                                FILTER (WHERE g.ip IS NOT NULL
+                                         AND g.error IS NULL
+                                         AND g.country IS NOT NULL)  AS total_with_geo,
+                            COUNT(DISTINCT s.session_key)
+                                FILTER (WHERE g.ip IS NULL
+                                          OR g.error IS NOT NULL
+                                          OR g.country IS NULL)      AS total_without_geo,
+                            COUNT(DISTINCT g.country)
+                                FILTER (WHERE g.country IS NOT NULL
+                                         AND g.error IS NULL)        AS unique_countries
+                        FROM sessions s
+                        LEFT JOIN ip_geo_cache g
+                               ON g.ip = s.src_ip
+                              AND g.expires_at > NOW()
+                    """)
+                )
+            ).one()
+            country_rows = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            g.country,
+                            g.country_code,
+                            COUNT(DISTINCT s.session_key)  AS session_count,
+                            COUNT(DISTINCT s.src_ip)       AS unique_ips
+                        FROM sessions s
+                        JOIN ip_geo_cache g
+                          ON g.ip = s.src_ip
+                         AND g.expires_at > NOW()
+                        WHERE g.country IS NOT NULL
+                          AND g.error IS NULL
+                        GROUP BY g.country, g.country_code
+                        ORDER BY session_count DESC
+                        LIMIT 20
+                    """)
+                )
+            ).fetchall()
+        return GeoStats(
+            total_with_geo=int(totals_row[0]),
+            total_without_geo=int(totals_row[1]),
+            unique_countries=int(totals_row[2]),
+            by_country=tuple(
+                GeoCountryStat(
+                    country=str(row[0]),
+                    country_code=str(row[1]) if row[1] is not None else None,
+                    session_count=int(row[2]),
+                    unique_ips=int(row[3]),
+                )
+                for row in country_rows
+            ),
         )
 
     async def fail_export(

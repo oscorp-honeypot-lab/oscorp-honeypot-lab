@@ -160,6 +160,22 @@ class VtStats:
 
 
 @dataclass(frozen=True, slots=True)
+class GeoCountryStat:
+    country: str
+    country_code: str | None
+    session_count: int
+    unique_ips: int
+
+
+@dataclass(frozen=True, slots=True)
+class GeoStats:
+    total_with_geo: int
+    total_without_geo: int
+    unique_countries: int
+    by_country: tuple[GeoCountryStat, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class AlertItem:
     id: UUID
     session_key: str

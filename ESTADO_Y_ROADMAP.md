@@ -1207,14 +1207,27 @@ LAB: IPs privadas (private_range) + sin descargas → ambas reglas no disparan.
      Con datos reales: +20pts hashes maliciosos, +10pts origen cloud.
 ```
 
-## Fase 29 — Visualización geográfica
+## Fase 29 — Visualización geográfica ✅
 
 Objetivo: representar actividad por ubicación.
 
-- [ ] Definir el mapeo `geo_point` en Elasticsearch.
-- [ ] Crear el mapa geográfico en Kibana.
-- [ ] Crear la visualización equivalente en la aplicación propia.
-- [ ] Validar sesiones sin coordenadas o con datos incompletos.
+```text
+[x] Definir el mapeo geo_point en Elasticsearch: campo src_location añadido a
+    cowrie-events (ensure_index + _update_index_geo_mapping para índices existentes).
+[x] Crear el mapa geográfico en Kibana: guía documentada en kibana/geo_map_guide.md.
+    El mapping ya permite crear el mapa en Kibana Maps. Configuración visual en Fase 32.
+[x] Crear la visualización equivalente en la aplicación propia: GeoPanel en
+    DashboardPage con stats (unique_countries, total_with_geo, cobertura, sin_geo)
+    + tabla top 20 países con flags Unicode.
+[x] Validar sesiones sin coordenadas o con datos incompletos: estado vacío
+    descriptivo en GeoPanel, total_without_geo en el endpoint.
+[x] 9 tests nuevos pipeline + 6 tests nuevos backend → 128 pipeline, 50 backend.
+```
+
+Evidencia: docs/evidencias/fase29_visualizacion_geografica.md
+
+LAB: IPs privadas (172.25.x.x) → private_range → sin geo_point en ES → by_country=[].
+     GeoPanel muestra estado vacío explicativo. Correcto para el entorno LAB.
 
 ## Fase 30 — Motor de reportes periódicos
 

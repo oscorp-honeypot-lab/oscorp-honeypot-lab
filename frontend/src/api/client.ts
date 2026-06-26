@@ -1,4 +1,5 @@
 import {
+  geoStatsApiV1AnalyticsGeoStatsGet,
   loginApiV1AuthLoginPost,
   logoutApiV1AuthLogoutPost,
   meApiV1AuthMeGet,
@@ -12,6 +13,7 @@ import {
 import { client } from "./generated/client.gen";
 import type {
   AnalyticsSummaryResponse,
+  GeoStatsResponse,
   LoginRequestWritable,
   MttdStatsResponse,
   SessionDetailResponse,
@@ -134,6 +136,10 @@ export async function reviewSession(
 
 export async function getMttdStats(): Promise<MttdStatsResponse> {
   return unwrap(await mttdStatsApiV1AnalyticsMttdGet());
+}
+
+export async function getGeoStats(): Promise<GeoStatsResponse> {
+  return unwrap(await geoStatsApiV1AnalyticsGeoStatsGet());
 }
 
 export async function getSessions(

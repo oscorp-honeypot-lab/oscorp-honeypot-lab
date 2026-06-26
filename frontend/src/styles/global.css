@@ -608,6 +608,95 @@ svg {
 
 /* ── end MTTD panel ────────────────────────────────────────────────────── */
 
+/* ── Geo panel ──────────────────────────────────────────────────────────── */
+
+.geo-panel {
+  margin-top: 18px;
+  padding: 20px 24px;
+  background: #202427;
+  border-left: 5px solid #2d6a4f;
+}
+
+.geo-panel .panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.geo-globe-icon {
+  color: #52b788;
+  flex-shrink: 0;
+}
+
+.geo-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.geo-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  background: #2a2e33;
+  border-radius: 4px;
+  min-width: 120px;
+}
+
+.geo-stat span {
+  color: #aeb8bd;
+  font-size: 0.72rem;
+}
+
+.geo-stat strong {
+  color: #fff;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.geo-country-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  color: #dce1e4;
+}
+
+.geo-country-table th {
+  text-align: left;
+  padding: 8px 10px;
+  color: #aeb8bd;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #2a2e33;
+}
+
+.geo-country-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #2a2e33;
+  font-variant-numeric: tabular-nums;
+}
+
+.geo-country-table tr:last-child td {
+  border-bottom: none;
+}
+
+.geo-flag {
+  margin-right: 8px;
+}
+
+.geo-empty {
+  color: #aeb8bd;
+  font-size: 0.85rem;
+  margin-top: 10px;
+  line-height: 1.6;
+}
+
+/* ── end Geo panel ──────────────────────────────────────────────────────── */
+
 .route-loader {
   width: 30px;
   height: 30px;

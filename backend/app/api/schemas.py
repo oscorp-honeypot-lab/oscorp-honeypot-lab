@@ -10,6 +10,8 @@ from app.domain.analytics import (
     AlertItem,
     AnalyticsSummary,
     EventListItem,
+    GeoCountryStat,
+    GeoStats,
     MttdStats,
     MttdTriggerStat,
     Page,
@@ -301,6 +303,40 @@ class VtStatsResponse(BaseModel):
             not_found=stats.not_found,
             error_count=stats.error_count,
             max_malicious=stats.max_malicious,
+        )
+
+
+class GeoCountryStatResponse(BaseModel):
+    country: str
+    country_code: str | None
+    session_count: int
+    unique_ips: int
+
+    @classmethod
+    def from_domain(cls, stat: GeoCountryStat) -> "GeoCountryStatResponse":
+        return cls(
+            country=stat.country,
+            country_code=stat.country_code,
+            session_count=stat.session_count,
+            unique_ips=stat.unique_ips,
+        )
+
+
+class GeoStatsResponse(BaseModel):
+    total_with_geo: int
+    total_without_geo: int
+    unique_countries: int
+    by_country: list[GeoCountryStatResponse]
+
+    @classmethod
+    def from_domain(cls, stats: GeoStats) -> "GeoStatsResponse":
+        return cls(
+            total_with_geo=stats.total_with_geo,
+            total_without_geo=stats.total_without_geo,
+            unique_countries=stats.unique_countries,
+            by_country=[
+                GeoCountryStatResponse.from_domain(c) for c in stats.by_country
+            ],
         )
 
 

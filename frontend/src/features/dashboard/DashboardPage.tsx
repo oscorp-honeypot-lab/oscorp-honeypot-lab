@@ -5,14 +5,18 @@ import {
   AlertTriangle,
   Clock3,
   Download,
+  Globe,
   RefreshCw,
   Server,
   ShieldAlert,
   Timer,
   Users,
 } from "lucide-react";
-import { getMttdStats, getSummary, getTimeline } from "../../api/client";
-import type { MttdTriggerStatResponse } from "../../api/generated/types.gen";
+import { getGeoStats, getMttdStats, getSummary, getTimeline } from "../../api/client";
+import type {
+  GeoCountryStatResponse,
+  MttdTriggerStatResponse,
+} from "../../api/generated/types.gen";
 import { EChart } from "./EChart";
 import { riskOption, timelineOption } from "./chartOptions";
 
@@ -34,6 +38,11 @@ export function DashboardPage() {
     queryKey: ["analytics", "mttd"],
     queryFn: getMttdStats,
     refetchInterval: 60_000,
+  });
+  const geo = useQuery({
+    queryKey: ["analytics", "geo"],
+    queryFn: getGeoStats,
+    refetchInterval: 300_000,
   });
 
   const timelineChart = useMemo(
@@ -172,6 +181,7 @@ export function DashboardPage() {
       </section>
 
       {mttd.data && <MttdPanel stats={mttd.data} />}
+      {geo.data && <GeoPanel stats={geo.data} />}
     </div>
   );
 }
@@ -296,6 +306,90 @@ function MttdPanel({
         <p className="mttd-empty">
           Sin alertas enviadas aún. Configurá <code>TELEGRAM_BOT_TOKEN</code> y{" "}
           <code>TELEGRAM_CHAT_ID</code> para activar el envío.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function countryFlag(code: string | null): string {
+  if (!code || code.length !== 2) return "🌐";
+  return [...code.toUpperCase()]
+    .map((c) => String.fromCodePoint(c.charCodeAt(0) + 127397))
+    .join("");
+}
+
+function GeoPanel({
+  stats,
+}: {
+  stats: {
+    total_with_geo: number;
+    total_without_geo: number;
+    unique_countries: number;
+    by_country: GeoCountryStatResponse[];
+  };
+}) {
+  const total = stats.total_with_geo + stats.total_without_geo;
+  const coveragePct =
+    total > 0 ? ((stats.total_with_geo / total) * 100).toFixed(1) : "0.0";
+  return (
+    <section className="geo-panel" aria-label="Origen geográfico de ataques">
+      <div className="panel-heading">
+        <div>
+          <p className="section-label">Enriquecimiento geográfico</p>
+          <h2>Origen de ataques</h2>
+        </div>
+        <Globe className="geo-globe-icon" aria-hidden="true" size={22} />
+      </div>
+
+      <div className="geo-stats-row">
+        <div className="geo-stat">
+          <span>Países únicos</span>
+          <strong>{number.format(stats.unique_countries)}</strong>
+        </div>
+        <div className="geo-stat">
+          <span>Sesiones con geo</span>
+          <strong>{number.format(stats.total_with_geo)}</strong>
+        </div>
+        <div className="geo-stat">
+          <span>Cobertura</span>
+          <strong>{coveragePct}%</strong>
+        </div>
+        <div className="geo-stat">
+          <span>Sin geo</span>
+          <strong>{number.format(stats.total_without_geo)}</strong>
+        </div>
+      </div>
+
+      {stats.by_country.length > 0 ? (
+        <table className="geo-country-table" aria-label="Top países por sesiones">
+          <thead>
+            <tr>
+              <th>País</th>
+              <th>Sesiones</th>
+              <th>IPs únicas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stats.by_country.map((c) => (
+              <tr key={c.country}>
+                <td>
+                  <span className="geo-flag" aria-hidden="true">
+                    {countryFlag(c.country_code ?? null)}
+                  </span>
+                  {c.country}
+                </td>
+                <td>{number.format(c.session_count)}</td>
+                <td>{number.format(c.unique_ips)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="geo-empty">
+          Sin datos geográficos disponibles. Las IPs privadas (LAB) no se
+          enriquecen con datos de ubicación. Con IPs públicas reales se
+          mostrará el origen de los ataques.
         </p>
       )}
     </section>

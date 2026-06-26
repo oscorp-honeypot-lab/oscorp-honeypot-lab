@@ -5,6 +5,7 @@ from app.domain.analytics import (
     AnalyticsSummary,
     EventFilters,
     EventListItem,
+    GeoStats,
     MttdStats,
     Page,
     SessionDetail,
@@ -78,6 +79,9 @@ class AnalyticsService:
 
     async def get_vt_stats(self) -> VtStats:
         return await self._repository.get_vt_stats()
+
+    async def get_geo_stats(self) -> GeoStats:
+        return await self._repository.get_geo_stats()
 
     async def list_alerts(
         self,
