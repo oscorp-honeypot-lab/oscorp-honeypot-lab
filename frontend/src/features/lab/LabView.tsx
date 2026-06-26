@@ -1,15 +1,47 @@
+import { Bug, Eye, Lock, Terminal, Zap } from "lucide-react";
 import type { LabRunResponse } from "../../api/client";
 
-const SCENARIOS: { key: string; label: string }[] = [
-  { key: "brute-force", label: "Fuerza bruta" },
-  { key: "recon", label: "Reconocimiento" },
-  { key: "malware-download", label: "Descarga malware" },
-  { key: "full", label: "Ataque completo" },
+type ScenarioDef = {
+  key: string;
+  label: string;
+  description: string;
+  Icon: React.ComponentType<{ "aria-hidden": true }>;
+};
+
+const SCENARIOS: ScenarioDef[] = [
+  {
+    key: "brute-force",
+    label: "Fuerza bruta",
+    description:
+      "Simula 50 intentos de login SSH con credenciales del diccionario. Genera cowrie.login.failed y cowrie.login.success.",
+    Icon: Lock,
+  },
+  {
+    key: "recon",
+    label: "Reconocimiento",
+    description:
+      "Post-login: ejecuta whoami, id, uname, ps, netstat y más comandos de reconocimiento. Genera cowrie.command.input en cadena.",
+    Icon: Eye,
+  },
+  {
+    key: "malware-download",
+    label: "Descarga malware",
+    description:
+      "Descarga payloads inocuos desde el servidor interno. Genera cowrie.session.file_download con SHA-256 del archivo.",
+    Icon: Bug,
+  },
+  {
+    key: "full",
+    label: "Ataque completo",
+    description:
+      "Ejecuta brute-force + recon + descarga en secuencia. Cobertura total del pipeline, risk score y alertas Telegram.",
+    Icon: Zap,
+  },
 ];
 
 const ACTIVE_STATUSES = new Set(["queued", "running", "processing"]);
 
-const STATUS_STYLE: Record<string, string> = {
+const STATUS_CLASS: Record<string, string> = {
   queued: "lab-badge lab-badge--queued",
   running: "lab-badge lab-badge--running",
   processing: "lab-badge lab-badge--processing",
@@ -39,7 +71,7 @@ export function LabView({ status, loading, error, canRun, onRun, onRetry }: LabV
     return (
       <section role="alert" className="lab-state lab-state--error">
         <p>No se pudo cargar el estado del laboratorio.</p>
-        <button type="button" onClick={onRetry}>
+        <button type="button" className="secondary-button" onClick={onRetry}>
           Reintentar
         </button>
       </section>
@@ -51,30 +83,45 @@ export function LabView({ status, loading, error, canRun, onRun, onRetry }: LabV
 
   return (
     <div className="lab-page">
-      <h1 className="lab-title">Laboratorio</h1>
+      <div className="page-header">
+        <h1>Laboratorio</h1>
+        {isActive && (
+          <div className="live-status">
+            <span />
+            Ejecución activa
+          </div>
+        )}
+      </div>
 
-      <div className="lab-scenarios">
-        {SCENARIOS.map(({ key, label }) => (
+      <div className="lab-scenario-grid">
+        {SCENARIOS.map(({ key, label, description, Icon }) => (
           <button
             key={key}
             type="button"
-            className="lab-scenario-button"
+            className="lab-scenario-card"
             disabled={buttonsDisabled}
             onClick={() => onRun(key)}
           >
-            {label}
+            <div className="lab-scenario-header">
+              <div className="lab-scenario-icon">
+                <Icon aria-hidden={true} />
+              </div>
+              <strong className="lab-scenario-name">{label}</strong>
+            </div>
+            <p className="lab-scenario-desc">{description}</p>
           </button>
         ))}
       </div>
 
       {status !== null && (
-        <div className="lab-status">
-          <span className="lab-status-label">Estado:</span>
-          <span className={STATUS_STYLE[status.status] ?? "lab-badge"}>
+        <div className="lab-status-band">
+          <Terminal aria-hidden={true} />
+          <div>
+            <strong>{status.scenario}</strong>
+            <span>actor: {status.actor}</span>
+          </div>
+          <span className={STATUS_CLASS[status.status] ?? "lab-badge"}>
             {status.status}
-          </span>
-          <span className="lab-status-scenario">
-            {status.scenario} — actor: {status.actor}
           </span>
         </div>
       )}
