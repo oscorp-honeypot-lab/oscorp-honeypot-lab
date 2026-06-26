@@ -52,14 +52,17 @@ SELECT
     s.first_username,
     s.last_username,
     s.has_successful_login,
-    (
-        SELECT {COUNTRY_EXPRESSION}
-        FROM eventos e
-        WHERE COALESCE(e.sensor, 'unknown') = s.sensor
-          AND e.session_id = s.session_id
-          AND {COUNTRY_EXPRESSION} IS NOT NULL
-        ORDER BY e.timestamp_evento, e.id
-        LIMIT 1
+    COALESCE(
+        (
+            SELECT {COUNTRY_EXPRESSION}
+            FROM eventos e
+            WHERE COALESCE(e.sensor, 'unknown') = s.sensor
+              AND e.session_id = s.session_id
+              AND {COUNTRY_EXPRESSION} IS NOT NULL
+            ORDER BY e.timestamp_evento, e.id
+            LIMIT 1
+        ),
+        g.country
     ) AS country,
     r.score AS risk_score,
     r.risk_level,
@@ -71,6 +74,7 @@ FROM sessions s
 LEFT JOIN session_risk_scores r
   ON r.session_key = s.session_key
  AND r.rules_version = :rules_version
+LEFT JOIN ip_geo_cache g ON g.ip = s.src_ip AND g.expires_at > NOW()
 LEFT JOIN app_users reviewer ON reviewer.id = s.reviewed_by
 """
 

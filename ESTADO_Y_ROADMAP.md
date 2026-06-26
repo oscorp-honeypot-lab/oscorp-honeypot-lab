@@ -1143,10 +1143,22 @@ Resultados reales (LAB):
 
 Objetivo: contextualizar el origen de las conexiones.
 
-- [ ] Integrar ip-api mediante un adaptador.
-- [ ] Agregar caché para evitar consultas repetidas.
-- [ ] Guardar país, ciudad, ISP, ASN, latitud y longitud.
-- [ ] Registrar expiración, errores y límites de consulta.
+```text
+[x] Migración 0011_ip_geo_cache: tabla con ip PK, country, country_code, city,
+    isp, asn, latitude, longitude, queried_at, expires_at, error.
+[x] IpApiAdapter: urllib.request + ipaddress stdlib, sin nuevas dependencias.
+    Detecta IPs privadas (RFC 1918) sin llamar a la API — error="private_range".
+[x] Caché con TTL 7 días (configurable): ON CONFLICT (ip) DO UPDATE.
+    LIMIT 30 IPs por run para respetar rate limit de ip-api (45 req/min).
+[x] Errores registrados: private_range, api_fail:{msg}, rate_limited, url_error.
+[x] Backend SESSION_SELECT: LEFT JOIN ip_geo_cache como fallback de country.
+[x] 21 tests nuevos (9 adapter + 7 cache + 5 enricher) → 82 pipeline totales.
+[x] Backend: 38/38 sin regresiones.
+Evidencia: docs/evidencias/fase26_geo_enriquecimiento.md
+
+LAB: IPs son privadas (172.25.0.x) → error=private_range, country=NULL.
+     Con IPs reales: country/city/isp/lat/lon almacenados y expuestos en /sessions.
+```
 
 ## Fase 27 — Enriquecimiento de hashes con VirusTotal
 

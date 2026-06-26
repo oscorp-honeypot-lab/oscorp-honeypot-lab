@@ -22,6 +22,8 @@ from psycopg.types.json import Jsonb
 from alerts.dispatcher import dispatch_pending_alerts
 from alerts.storage import generate_session_alerts
 from alerts.telegram import TelegramAdapter
+from geo.adapter import IpApiAdapter
+from geo.enricher import enrich_session_ips
 from risk.storage import recalculate_scores
 
 
@@ -1010,6 +1012,7 @@ def execute_pipeline(
                 recalculate_scores(connection, session_keys)
                 generate_session_alerts(connection, session_keys, run_id)
                 dispatch_pending_alerts(connection, TelegramAdapter.from_env())
+                enrich_session_ips(connection, IpApiAdapter())
                 indexed = index_events(
                     elasticsearch_url,
                     elasticsearch_index,
