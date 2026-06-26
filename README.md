@@ -89,34 +89,87 @@ Validacion general del LAB:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_lab.ps1
 ```
 
-### Desarrollo: actualizar backend y frontend
+### Desarrollo: actualizar despues de un `git pull`
 
 Para usar el LAB normal, no hace falta levantar backend ni frontend a mano:
 `setup.ps1` y `docker compose --profile lab up -d` dejan todo corriendo.
 
-En este compose, backend y frontend se construyen dentro de imagenes Docker.
-Eso significa que, si se cambia codigo del backend o del frontend en el repo,
-hay que reconstruir y recrear el servicio correspondiente.
+En este compose, varios servicios se construyen dentro de imagenes Docker. Eso
+significa que, despues de traer cambios con `git pull`, no siempre alcanza con
+reconstruir solo `backend` y `frontend`: algunas fases tambien cambian
+migraciones, pipeline o el simulador de ataques.
+
+Ruta recomendada despues de un `git pull`:
+
+```powershell
+docker compose build backend frontend pipeline-worker attacker-sim
+docker compose --profile lab run --rm migrate
+docker compose --profile lab up -d --force-recreate backend frontend pipeline-worker attacker-sim
+```
+
+Luego validar:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_lab.ps1
+```
+
+Esta ruta cubre:
+
+```text
+backend          API, autenticacion, endpoints y servicios de aplicacion
+frontend         app web servida en http://localhost:5173
+pipeline-worker  procesamiento, alertas Telegram, reportes y reglas
+attacker-sim     escenarios de Laboratorio y simulaciones desde la web
+migrate          migraciones nuevas de PostgreSQL
+```
+
+Si se omite alguno cuando el cambio lo necesitaba, pueden aparecer errores como
+un `500` en la app aunque el codigo del repo ya este actualizado. Por ejemplo,
+si se agrega una tabla nueva y no se corre `migrate`, el backend puede fallar al
+consultarla.
+
+Para cambios puntuales durante desarrollo, tambien se puede reconstruir solo lo
+afectado.
 
 Backend:
 
 ```powershell
 docker compose build backend
-docker compose up -d backend
+docker compose up -d --force-recreate backend
 ```
 
 Frontend:
 
 ```powershell
 docker compose build frontend
-docker compose up -d frontend
+docker compose up -d --force-recreate frontend
 ```
 
 Backend y frontend juntos:
 
 ```powershell
 docker compose build backend frontend
-docker compose up -d backend frontend
+docker compose up -d --force-recreate backend frontend
+```
+
+Pipeline, alertas, reportes o reglas:
+
+```powershell
+docker compose build pipeline-worker
+docker compose up -d --force-recreate pipeline-worker
+```
+
+Migraciones nuevas:
+
+```powershell
+docker compose --profile lab run --rm migrate
+```
+
+Simulador de ataques o Laboratorio:
+
+```powershell
+docker compose build attacker-sim
+docker compose --profile lab up -d --force-recreate attacker-sim
 ```
 
 El frontend ejecuta `npm run dev` dentro del contenedor, pero el codigo queda
@@ -354,6 +407,78 @@ Importar dashboards desde el artefacto versionado:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\import_kibana_dashboards.ps1
 ```
+
+## Modo REAL / VPS
+
+El modo REAL usa una VPS publica solo como sensor Cowrie. El procesamiento,
+dashboard, n8n, PostgreSQL, Elasticsearch y Telegram siguen corriendo en la PC
+local con Docker.
+
+Regla importante: Codex no debe conectarse por SSH a la VPS. La persona que
+tiene las credenciales ejecuta manualmente los scripts desde su PC.
+
+### 1. Configurar `.env`
+
+Completar sin guardar passwords:
+
+```text
+VPS_HOST=IP_DE_LA_VPS
+VPS_USER=root
+VPS_SSH_PORT=22
+VPS_REMOTE_DIR=/opt/oscorp-cowrie
+VPS_COWRIE_SSH_PORT=2222
+VPS_COWRIE_LOG_PATH=/opt/oscorp-cowrie/logs/cowrie.json
+```
+
+Si la VPS usa password SSH, `ssh` y `scp` la van a pedir en la terminal. No se
+agrega `VPS_PASSWORD` al repo.
+
+### 2. Preparar la VPS
+
+Ejecutar desde la raiz del proyecto:
+
+```powershell
+.\scripts\setup_vps.ps1
+```
+
+El script instala Docker en Ubuntu, crea `/opt/oscorp-cowrie`, levanta Cowrie en
+el puerto `2222` y valida que el contenedor quede corriendo. No modifica el SSH
+administrativo de la VPS.
+
+### 3. Levantar el stack local REAL
+
+```powershell
+docker compose --profile real up -d --build
+```
+
+Este perfil no levanta Cowrie local, `attacker-sim` ni `payload-server`.
+
+### 4. Sincronizar eventos reales
+
+```powershell
+.\scripts\sync_vps_logs.ps1
+```
+
+O sincronizar y procesar en un solo paso:
+
+```powershell
+.\scripts\sync_vps_logs.ps1 -RunPipeline
+```
+
+Luego revisar la app:
+
+```text
+http://localhost:5173/dashboard
+```
+
+### 5. Validar la base REAL sin conectarse a la VPS
+
+```powershell
+.\scripts\validate_real_mode.ps1
+```
+
+Esta validacion revisa scripts, perfil `real` de Docker Compose y ausencia de
+passwords de VPS en `.env.example`.
 
 ## Procesar cowrie.json manualmente
 

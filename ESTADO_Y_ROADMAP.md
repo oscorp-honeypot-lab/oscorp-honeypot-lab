@@ -207,7 +207,7 @@ Entrega de alertas Telegram:                Implementada en Fase 24 (configurabl
 MTTD real:                                  Parcial — sent_at y mttd_seconds en alerts; API en Fase 25
 VirusTotal e ip-api:                        No implementados en la reestructuración
 Reportes automáticos:                       No implementados
-Modo REAL/VPS:                              Diseñado, no validado
+Modo REAL/VPS:                              Base Fase 34 implementada; VPS real pendiente de validar
 Pruebas automatizadas/CI:                   Pruebas backend y pipeline integradas; CI pendiente
 Actualización final de la tesis:            Pendiente hasta finalizar el sistema
 ```
@@ -1423,21 +1423,42 @@ Buscar antes de implementar:
 
 ## Fase 34 — Arquitectura segura del modo REAL
 
-Objetivo: diseñar la captura pública sin convertir la VPS en requisito.
+Objetivo: dejar una base segura y repetible para capturar trafico real desde
+una VPS sin convertirla en requisito del proyecto y sin que Codex se conecte por
+SSH a la infraestructura.
 
-- [ ] Definir una arquitectura que no dependa de la PC local encendida.
-- [ ] Crear modelo de amenazas y endurecimiento de Cowrie.
-- [ ] Definir cifrado, autenticación y gestión de secretos.
-- [ ] Documentar costos, límites y responsabilidades del modo REAL.
+- [x] Definir una arquitectura donde la VPS actua solo como sensor Cowrie y el
+      procesamiento sigue local.
+- [x] Incorporar la regla operativa: Codex no se conecta por SSH; la persona con
+      credenciales ejecuta `scripts/setup_vps.ps1` manualmente.
+- [x] Crear `scripts/setup_vps.ps1` para preparar Ubuntu 24.04 con Docker,
+      desplegar Cowrie en `/opt/oscorp-cowrie` y exponerlo en `2222`.
+- [x] Crear `scripts/sync_vps_logs.ps1` para traer
+      `/opt/oscorp-cowrie/logs/cowrie.json` al LAB local.
+- [x] Crear `scripts/validate_real_mode.ps1` para validar scripts, perfil
+      `real` y ausencia de passwords de VPS versionadas.
+- [x] Actualizar `.env.example`, README y `docs/arquitectura-vps.md`.
 
-## Fase 35 — Despliegue y sincronización de la VPS
+Decision de fase:
+- No se versionan IPs, passwords ni credenciales reales de DigitalOcean.
+- No se toca el SSH administrativo de la VPS.
+- El perfil `real` no levanta Cowrie local, `attacker-sim` ni `payload-server`.
+- La prueba contra la VPS real queda para quien tiene acceso al servidor.
 
-Objetivo: automatizar la captura y el envío continuo.
+Evidencia: docs/evidencias/fase34_arquitectura_vps.md
 
-- [ ] Automatizar instalación y actualización de Cowrie.
-- [ ] Implementar sincronización o envío continuo de eventos.
-- [ ] Agregar buffer, reintentos y recuperación ante desconexiones.
-- [ ] Validar el flujo sin exponer los servicios internos del LAB.
+## Fase 35 — Despliegue validado y sincronización continua de la VPS
+
+Objetivo: probar la base de Fase 34 contra la VPS real y automatizar la captura
+continua con evidencia operativa.
+
+- [ ] Ejecutar `scripts/setup_vps.ps1` en la PC de la persona con credenciales.
+- [ ] Confirmar que Cowrie recibe trafico real en la VPS de DigitalOcean.
+- [ ] Ejecutar `scripts/sync_vps_logs.ps1 -RunPipeline` y validar datos en app,
+      PostgreSQL, Elasticsearch y Telegram.
+- [ ] Agregar sincronizacion periodica con reintentos y registro de resultados.
+- [ ] Definir rotacion/retencion de logs y procedimiento de apagado de la VPS.
+- [ ] Evaluar migracion de password SSH a clave SSH dedicada.
 
 ## Fase 36 — Separación y comparación LAB/REAL
 
