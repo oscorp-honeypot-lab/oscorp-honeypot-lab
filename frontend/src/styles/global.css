@@ -610,6 +610,57 @@ svg {
 
 /* ── Geo panel ──────────────────────────────────────────────────────────── */
 
+.report-panel {
+  margin-top: 18px;
+  padding: 20px 24px;
+  background: #fff;
+  border: 1px solid #dce1e4;
+}
+
+.report-panel .panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.report-panel .panel-heading svg {
+  color: #087e8b;
+  flex-shrink: 0;
+}
+
+.report-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.report-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px;
+  background: #f4f6f7;
+  border-radius: 4px;
+}
+
+.report-action-row strong {
+  color: #202427;
+  font-size: 0.9rem;
+}
+
+.report-action-row > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-status {
+  margin-top: 12px;
+  color: #52616b;
+  font-size: 0.84rem;
+}
+
 .geo-panel {
   margin-top: 18px;
   padding: 20px 24px;

@@ -331,6 +331,9 @@ La validación operativa más reciente confirmó:
 - worker validado con triggered_by=n8n_schedule y report_runs daily/weekly
   generados correctamente;
 - contrato n8n validado e importación del workflow versionado verificada.
+- Fase 31 implementada: reportes HTML/CSV descargables, envío Telegram
+  desde API, registro en report_deliveries y panel de entregas en dashboard;
+- 57 pruebas backend, 133 pipeline y 12 frontend superadas; build frontend OK.
 ```
 
 Se verificaron los diez servicios persistentes del perfil LAB en ejecución:
@@ -1250,14 +1253,19 @@ LAB: reportes idempotentes por periodo en `report_runs`. Validación Docker:
 133 pruebas pipeline OK, Alembic en `0013_report_runs`, worker schedule OK
 y contrato n8n validado.
 
-## Fase 31 — Formatos y entrega de reportes
+## Fase 31 — Formatos y entrega de reportes ✅
 
 Objetivo: distribuir reportes reproducibles.
 
-- [ ] Generar HTML o PDF y CSV.
-- [ ] Permitir descarga desde la aplicación.
-- [ ] Permitir envío por Telegram.
-- [ ] Registrar generación, entrega y errores.
+- [x] Generar HTML o PDF y CSV.
+- [x] Permitir descarga desde la aplicación.
+- [x] Permitir envío por Telegram.
+- [x] Registrar generación, entrega y errores.
+
+Evidencia: docs/evidencias/fase31_formatos_entrega_reportes.md
+
+LAB: HTML + CSV descargables desde API/dashboard; Telegram registra
+`skipped` si no hay credenciales y `report_deliveries` audita entregas.
 
 ## Fase 32 — Dashboards operativos de Kibana
 

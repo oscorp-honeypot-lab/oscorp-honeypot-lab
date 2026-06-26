@@ -24,10 +24,12 @@ from app.application.auth_service import AuthService
 from app.application.analytics_service import AnalyticsService
 from app.application.export_service import ExportService
 from app.application.health_service import HealthService
+from app.application.report_service import ReportService
 from app.infrastructure.config import get_settings
 from app.infrastructure.database import create_engine, create_session_factory
 from app.infrastructure.logging import configure_logging
 from app.infrastructure.security import PasswordManager
+from app.infrastructure.telegram import TelegramAdapter
 
 
 settings = get_settings()
@@ -61,6 +63,13 @@ async def lifespan(app: FastAPI):
     app.state.export_service = ExportService(
         analytics_repository,
         rules_version="1.1.0",
+    )
+    app.state.report_service = ReportService(
+        analytics_repository,
+        telegram_sender=TelegramAdapter.from_settings(
+            bot_token=settings.telegram_bot_token,
+            chat_id=settings.telegram_chat_id,
+        ),
     )
     app.state.settings = settings
     logger.info("api_started", environment=settings.environment)

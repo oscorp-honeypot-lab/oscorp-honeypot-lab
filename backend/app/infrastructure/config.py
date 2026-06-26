@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     login_max_failures: int = 5
     admin_username: str = "admin"
     admin_password: str = Field(default="", repr=False)
+    telegram_bot_token: str = Field(default="", repr=False)
+    telegram_chat_id: str = Field(default="", repr=False)
 
     @property
     def allowed_origins(self) -> list[str]:

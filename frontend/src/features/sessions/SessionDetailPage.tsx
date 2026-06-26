@@ -37,6 +37,10 @@ function riskLabel(value: string | null) {
   );
 }
 
+function reasonEvidence(value: unknown): string {
+  return Array.isArray(value) ? value.map(String).join(", ") : "";
+}
+
 // --- Presentational ---
 
 export type SessionDetailViewProps = {
@@ -181,9 +185,9 @@ export function SessionDetailView({
                     <span className="reason-weight">
                       +{String(reason["weight"] ?? 0)} pts
                     </span>
-                    {reason["evidence"] && Array.isArray(reason["evidence"]) && (
+                    {reasonEvidence(reason["evidence"]) && (
                       <span className="reason-evidence">
-                        {(reason["evidence"] as string[]).join(", ")}
+                        {reasonEvidence(reason["evidence"])}
                       </span>
                     )}
                   </li>

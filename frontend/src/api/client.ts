@@ -44,6 +44,19 @@ export type SessionQuery = {
   sortOrder: "asc" | "desc";
 };
 
+export type ReportPeriodType = "daily" | "weekly";
+export type ReportFormat = "html" | "csv";
+
+export type ReportDeliveryResponse = {
+  id: string;
+  report_id: string;
+  channel: string;
+  format: string;
+  status: string;
+  filename: string | null;
+  error_code: string | null;
+};
+
 client.setConfig({
   baseUrl: "",
   credentials: "include",
@@ -160,4 +173,54 @@ export async function getSessions(
       },
     }),
   );
+}
+
+function filenameFromDisposition(header: string | null, fallback: string): string {
+  const match = header?.match(/filename="([^"]+)"/);
+  return match ? match[1] : fallback;
+}
+
+export async function downloadLatestReport(
+  periodType: ReportPeriodType,
+  format: ReportFormat,
+): Promise<void> {
+  const response = await fetch(
+    `/api/v1/reports/latest/${periodType}/download?format=${format}`,
+    { credentials: "include" },
+  );
+  if (!response.ok) {
+    throw new ApiError("report_download_failed", response.status);
+  }
+  const blob = await response.blob();
+  const fallback = `oscorp-report-${periodType}.${format}`;
+  const filename = filenameFromDisposition(
+    response.headers.get("content-disposition"),
+    fallback,
+  );
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function sendLatestReportTelegram(
+  periodType: ReportPeriodType,
+  format: ReportFormat,
+): Promise<ReportDeliveryResponse> {
+  const response = await fetch(
+    `/api/v1/reports/latest/${periodType}/telegram?format=${format}`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { "X-CSRF-Token": csrfToken() },
+    },
+  );
+  if (!response.ok) {
+    throw new ApiError("report_telegram_failed", response.status);
+  }
+  return (await response.json()) as ReportDeliveryResponse;
 }

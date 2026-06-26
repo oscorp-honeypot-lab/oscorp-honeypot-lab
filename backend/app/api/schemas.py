@@ -15,6 +15,8 @@ from app.domain.analytics import (
     MttdStats,
     MttdTriggerStat,
     Page,
+    ReportDelivery,
+    ReportRun,
     SessionDetail,
     SessionListItem,
     TimelinePoint,
@@ -371,4 +373,46 @@ class AlertPageResponse(BaseModel):
         return cls(
             items=tuple(AlertItemResponse.from_domain(item) for item in page.items),
             pagination=PaginationResponse.from_page(page),
+        )
+
+
+class ReportRunResponse(BaseModel):
+    id: UUID
+    period_type: str
+    period_start: datetime
+    period_end: datetime
+    status: str
+    dataset: dict[str, object]
+
+    @classmethod
+    def from_domain(cls, report: ReportRun) -> "ReportRunResponse":
+        return cls(
+            id=report.id,
+            period_type=report.period_type,
+            period_start=report.period_start,
+            period_end=report.period_end,
+            status=report.status,
+            dataset=report.dataset,
+        )
+
+
+class ReportDeliveryResponse(BaseModel):
+    id: UUID
+    report_id: UUID
+    channel: str
+    format: str
+    status: str
+    filename: str | None
+    error_code: str | None
+
+    @classmethod
+    def from_domain(cls, delivery: ReportDelivery) -> "ReportDeliveryResponse":
+        return cls(
+            id=delivery.id,
+            report_id=delivery.report_id,
+            channel=delivery.channel,
+            format=delivery.format,
+            status=delivery.status,
+            filename=delivery.filename,
+            error_code=delivery.error_code,
         )

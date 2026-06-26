@@ -5,14 +5,23 @@ import {
   AlertTriangle,
   Clock3,
   Download,
+  FileText,
   Globe,
   RefreshCw,
+  Send,
   Server,
   ShieldAlert,
   Timer,
   Users,
 } from "lucide-react";
-import { getGeoStats, getMttdStats, getSummary, getTimeline } from "../../api/client";
+import {
+  downloadLatestReport,
+  getGeoStats,
+  getMttdStats,
+  getSummary,
+  getTimeline,
+  sendLatestReportTelegram,
+} from "../../api/client";
 import type {
   GeoCountryStatResponse,
   MttdTriggerStatResponse,
@@ -24,6 +33,8 @@ const number = new Intl.NumberFormat("es-AR");
 
 export function DashboardPage() {
   const [hours, setHours] = useState(24);
+  const [reportBusy, setReportBusy] = useState<string | null>(null);
+  const [reportStatus, setReportStatus] = useState<string>("");
   const summary = useQuery({
     queryKey: ["analytics", "summary"],
     queryFn: getSummary,
@@ -181,6 +192,40 @@ export function DashboardPage() {
       </section>
 
       {mttd.data && <MttdPanel stats={mttd.data} />}
+      <ReportPanel
+        busy={reportBusy}
+        status={reportStatus}
+        onDownload={async (periodType, format) => {
+          const key = `${periodType}-${format}-download`;
+          setReportBusy(key);
+          setReportStatus("");
+          try {
+            await downloadLatestReport(periodType, format);
+            setReportStatus("Descarga preparada");
+          } catch {
+            setReportStatus("No se pudo descargar el reporte");
+          } finally {
+            setReportBusy(null);
+          }
+        }}
+        onTelegram={async (periodType) => {
+          const key = `${periodType}-telegram`;
+          setReportBusy(key);
+          setReportStatus("");
+          try {
+            const delivery = await sendLatestReportTelegram(periodType, "html");
+            setReportStatus(
+              delivery.status === "skipped"
+                ? "Telegram no configurado"
+                : "Reporte enviado a Telegram",
+            );
+          } catch {
+            setReportStatus("No se pudo enviar el reporte");
+          } finally {
+            setReportBusy(null);
+          }
+        }}
+      />
       {geo.data && <GeoPanel stats={geo.data} />}
     </div>
   );
@@ -317,6 +362,71 @@ function countryFlag(code: string | null): string {
   return [...code.toUpperCase()]
     .map((c) => String.fromCodePoint(c.charCodeAt(0) + 127397))
     .join("");
+}
+
+function ReportPanel({
+  busy,
+  status,
+  onDownload,
+  onTelegram,
+}: {
+  busy: string | null;
+  status: string;
+  onDownload: (periodType: "daily" | "weekly", format: "html" | "csv") => Promise<void>;
+  onTelegram: (periodType: "daily" | "weekly") => Promise<void>;
+}) {
+  const periods = [
+    { key: "daily" as const, label: "Diario" },
+    { key: "weekly" as const, label: "Semanal" },
+  ];
+  return (
+    <section className="report-panel" aria-label="Reportes periodicos">
+      <div className="panel-heading">
+        <div>
+          <p className="section-label">Reportes</p>
+          <h2>Entregas reproducibles</h2>
+        </div>
+        <FileText aria-hidden="true" size={22} />
+      </div>
+      <div className="report-actions">
+        {periods.map((period) => (
+          <div className="report-action-row" key={period.key}>
+            <strong>{period.label}</strong>
+            <div>
+              <button
+                className="icon-button"
+                aria-label={`Descargar reporte ${period.label} HTML`}
+                title="Descargar HTML"
+                disabled={busy !== null}
+                onClick={() => void onDownload(period.key, "html")}
+              >
+                <FileText aria-hidden="true" size={16} />
+              </button>
+              <button
+                className="icon-button"
+                aria-label={`Descargar reporte ${period.label} CSV`}
+                title="Descargar CSV"
+                disabled={busy !== null}
+                onClick={() => void onDownload(period.key, "csv")}
+              >
+                <Download aria-hidden="true" size={16} />
+              </button>
+              <button
+                className="icon-button"
+                aria-label={`Enviar reporte ${period.label} por Telegram`}
+                title="Enviar Telegram"
+                disabled={busy !== null}
+                onClick={() => void onTelegram(period.key)}
+              >
+                <Send aria-hidden="true" size={16} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {status && <p className="report-status">{status}</p>}
+    </section>
+  );
 }
 
 function GeoPanel({

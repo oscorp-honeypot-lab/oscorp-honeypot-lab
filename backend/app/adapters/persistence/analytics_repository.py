@@ -18,6 +18,7 @@ from app.domain.analytics import (
     MttdStats,
     MttdTriggerStat,
     Page,
+    ReportRun,
     RiskScore,
     SessionDetail,
     SessionFilters,
@@ -925,5 +926,111 @@ class PostgresAnalyticsRepository:
                 {
                     "export_id": export_id,
                     "error_code": error_code[:128],
+                },
+            )
+
+    async def get_latest_report(self, *, period_type: str) -> ReportRun | None:
+        async with self._session_factory() as session:
+            result = await session.execute(
+                text(
+                    """
+                    SELECT
+                        id,
+                        period_type,
+                        period_start,
+                        period_end,
+                        status,
+                        dataset
+                    FROM report_runs
+                    WHERE period_type = :period_type
+                      AND status = 'completed'
+                    ORDER BY period_end DESC, finished_at DESC
+                    LIMIT 1
+                    """
+                ),
+                {"period_type": period_type},
+            )
+            row = result.first()
+        if row is None:
+            return None
+        dataset = row.dataset
+        if isinstance(dataset, str):
+            dataset = json.loads(dataset)
+        return ReportRun(
+            id=UUID(str(row.id)),
+            period_type=str(row.period_type),
+            period_start=row.period_start,
+            period_end=row.period_end,
+            status=str(row.status),
+            dataset=dict(dataset),
+        )
+
+    async def start_report_delivery(
+        self,
+        *,
+        report_id: UUID,
+        user_id: UUID,
+        channel: str,
+        format: str,
+    ) -> UUID:
+        async with self._session_factory.begin() as session:
+            result = await session.execute(
+                text(
+                    """
+                    INSERT INTO report_deliveries (
+                        report_run_id,
+                        user_id,
+                        channel,
+                        format,
+                        status
+                    )
+                    VALUES (
+                        :report_id,
+                        :user_id,
+                        :channel,
+                        :format,
+                        'running'
+                    )
+                    RETURNING id
+                    """
+                ),
+                {
+                    "report_id": report_id,
+                    "user_id": user_id,
+                    "channel": channel,
+                    "format": format,
+                },
+            )
+            return UUID(str(result.scalar_one()))
+
+    async def finish_report_delivery(
+        self,
+        *,
+        delivery_id: UUID,
+        status: str,
+        filename: str | None = None,
+        error_code: str | None = None,
+        error_detail: str | None = None,
+    ) -> None:
+        async with self._session_factory.begin() as session:
+            await session.execute(
+                text(
+                    """
+                    UPDATE report_deliveries
+                    SET
+                        status = :status,
+                        filename = :filename,
+                        error_code = :error_code,
+                        error_detail = :error_detail,
+                        finished_at = NOW()
+                    WHERE id = :delivery_id
+                    """
+                ),
+                {
+                    "delivery_id": delivery_id,
+                    "status": status,
+                    "filename": filename,
+                    "error_code": error_code[:128] if error_code else None,
+                    "error_detail": error_detail[:2048] if error_detail else None,
                 },
             )

@@ -201,3 +201,34 @@ class ExportArtifact:
     total_rows: int
     page: int
     page_size: int
+
+
+@dataclass(frozen=True, slots=True)
+class ReportRun:
+    id: UUID
+    period_type: str
+    period_start: datetime
+    period_end: datetime
+    status: str
+    dataset: dict[str, object]
+
+
+@dataclass(frozen=True, slots=True)
+class ReportArtifact:
+    delivery_id: UUID
+    report_id: UUID
+    period_type: str
+    filename: str
+    media_type: str
+    content: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class ReportDelivery:
+    id: UUID
+    report_id: UUID
+    channel: str
+    format: str
+    status: str
+    filename: str | None
+    error_code: str | None

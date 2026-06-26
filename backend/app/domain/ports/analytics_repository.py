@@ -11,6 +11,7 @@ from app.domain.analytics import (
     GeoStats,
     MttdStats,
     Page,
+    ReportRun,
     SessionDetail,
     SessionFilters,
     SessionListItem,
@@ -98,4 +99,29 @@ class AnalyticsRepository(Protocol):
         *,
         export_id: UUID,
         error_code: str,
+    ) -> None: ...
+
+    async def get_latest_report(
+        self,
+        *,
+        period_type: str,
+    ) -> ReportRun | None: ...
+
+    async def start_report_delivery(
+        self,
+        *,
+        report_id: UUID,
+        user_id: UUID,
+        channel: str,
+        format: str,
+    ) -> UUID: ...
+
+    async def finish_report_delivery(
+        self,
+        *,
+        delivery_id: UUID,
+        status: str,
+        filename: str | None = None,
+        error_code: str | None = None,
+        error_detail: str | None = None,
     ) -> None: ...
