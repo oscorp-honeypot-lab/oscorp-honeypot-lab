@@ -15,17 +15,22 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         *,
         session_cookie_name: str,
         csrf_cookie_name: str,
+        exempt_paths: set[str] | None = None,
     ) -> None:
         super().__init__(app)
         self._session_cookie_name = session_cookie_name
         self._csrf_cookie_name = csrf_cookie_name
+        self._exempt_paths = exempt_paths or set()
 
     async def dispatch(
         self,
         request: Request,
         call_next: RequestResponseEndpoint,
     ) -> Response:
-        if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+        if (
+            request.method in {"POST", "PUT", "PATCH", "DELETE"}
+            and request.url.path not in self._exempt_paths
+        ):
             session_token = request.cookies.get(self._session_cookie_name)
             if session_token:
                 cookie_token = request.cookies.get(self._csrf_cookie_name, "")

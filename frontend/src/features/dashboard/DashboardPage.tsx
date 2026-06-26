@@ -30,6 +30,7 @@ import { EChart } from "./EChart";
 import { riskOption, timelineOption } from "./chartOptions";
 
 const number = new Intl.NumberFormat("es-AR");
+const LIVE_REFRESH_MS = 10_000;
 
 export function DashboardPage() {
   const [hours, setHours] = useState(24);
@@ -38,22 +39,22 @@ export function DashboardPage() {
   const summary = useQuery({
     queryKey: ["analytics", "summary"],
     queryFn: getSummary,
-    refetchInterval: 60_000,
+    refetchInterval: LIVE_REFRESH_MS,
   });
   const timeline = useQuery({
     queryKey: ["analytics", "timeline", hours],
     queryFn: () => getTimeline(hours),
-    refetchInterval: 60_000,
+    refetchInterval: LIVE_REFRESH_MS,
   });
   const mttd = useQuery({
     queryKey: ["analytics", "mttd"],
     queryFn: getMttdStats,
-    refetchInterval: 60_000,
+    refetchInterval: LIVE_REFRESH_MS,
   });
   const geo = useQuery({
     queryKey: ["analytics", "geo"],
     queryFn: getGeoStats,
-    refetchInterval: 300_000,
+    refetchInterval: 60_000,
   });
 
   const timelineChart = useMemo(

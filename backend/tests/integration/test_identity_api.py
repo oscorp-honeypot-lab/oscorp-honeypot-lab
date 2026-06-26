@@ -115,6 +115,17 @@ def test_login_authorization_csrf_logout_and_audit() -> None:
             assert cursor.fetchone()[0] == 1
 
 
+def test_login_replaces_stale_session_without_csrf_header() -> None:
+    with TestClient(app) as client:
+        client.cookies.set("oscorp_session", "stale-session")
+        client.cookies.set("oscorp_csrf", "stale-csrf")
+
+        response = admin_login(client)
+
+        assert response.status_code == 200
+        assert "oscorp_session=" in response.headers["set-cookie"].lower()
+
+
 def test_analyst_and_admin_permissions() -> None:
     with TestClient(app) as admin_client:
         analyst_username, analyst_password = create_user(

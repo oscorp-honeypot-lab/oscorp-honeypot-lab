@@ -99,6 +99,7 @@ app.add_middleware(
     CsrfMiddleware,
     session_cookie_name=settings.session_cookie_name,
     csrf_cookie_name=settings.csrf_cookie_name,
+    exempt_paths={"/api/v1/auth/login"},
 )
 app.include_router(api_router, prefix="/api/v1")
 

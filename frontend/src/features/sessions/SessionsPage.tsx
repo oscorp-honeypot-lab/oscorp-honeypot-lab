@@ -47,6 +47,7 @@ const dateTime = new Intl.DateTimeFormat("es-AR", {
   timeStyle: "short",
 });
 const number = new Intl.NumberFormat("es-AR");
+const LIVE_REFRESH_MS = 10_000;
 
 function formatDate(value: string) {
   return dateTime.format(new Date(value));
@@ -157,6 +158,7 @@ export function SessionsPage() {
     queryKey: ["sessions", query],
     queryFn: () => getSessions(query),
     placeholderData: keepPreviousData,
+    refetchInterval: LIVE_REFRESH_MS,
   });
   const data = useMemo(() => sessions.data?.items ?? [], [sessions.data]);
 

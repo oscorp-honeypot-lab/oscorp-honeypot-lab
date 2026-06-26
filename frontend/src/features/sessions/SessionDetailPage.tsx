@@ -20,6 +20,7 @@ const dateTime = new Intl.DateTimeFormat("es-AR", {
   dateStyle: "short",
   timeStyle: "short",
 });
+const LIVE_REFRESH_MS = 10_000;
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "—";
@@ -304,6 +305,7 @@ export function SessionDetailPage() {
     retry: (count, error) =>
       error instanceof ApiError && error.status === 404 ? false : count < 1,
     enabled: !!sessionKey,
+    refetchInterval: LIVE_REFRESH_MS,
   });
 
   const reviewMutation = useMutation({

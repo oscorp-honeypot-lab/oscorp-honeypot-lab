@@ -6,6 +6,18 @@ from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 
 
+def _http_error_detail(exc: HTTPError) -> str:
+    detail = exc.reason
+    try:
+        body = exc.read().decode("utf-8", errors="replace")
+        payload = json.loads(body)
+        if isinstance(payload, dict) and payload.get("description"):
+            detail = str(payload["description"])
+    except Exception:  # noqa: BLE001
+        pass
+    return f"http_{exc.code}: {detail}"
+
+
 @dataclass(frozen=True, slots=True)
 class TelegramAdapter:
     bot_token: str
@@ -39,6 +51,6 @@ class TelegramAdapter:
             urllib.request.urlopen(req, timeout=10)
             return True, None
         except HTTPError as exc:
-            return False, f"http_{exc.code}: {exc.reason}"
+            return False, _http_error_detail(exc)
         except URLError as exc:
             return False, f"url_error: {exc.reason}"

@@ -1283,14 +1283,119 @@ LAB: `scripts/configure_kibana_phase32.ps1` crea/reutiliza el data view,
 `oscorp-phase32-operational`. Validado contra 2451 documentos en
 `cowrie-events`; verificación visual OK con 6 paneles renderizados.
 
-## Fase 33 — Dashboards analíticos de Kibana versionados
+## Fase 33 — Dashboards analíticos de Kibana versionados ✅
 
 Objetivo: completar y volver importable la capa Kibana.
 
-- [ ] Crear visualizaciones de riesgo y mapa geográfico.
-- [ ] Exportar objetos a `kibana/dashboards.ndjson`.
-- [ ] Automatizar o documentar la importación.
-- [ ] Validar exportación e importación desde una instancia limpia.
+- [x] Crear visualizaciones de riesgo y mapa geográfico.
+- [x] Exportar objetos a `kibana/dashboards.ndjson`.
+- [x] Automatizar o documentar la importación.
+- [x] Validar exportación e importación desde una instancia limpia.
+
+Evidencia: docs/evidencias/fase33_dashboards_analiticos_kibana.md
+
+LAB: `scripts/configure_kibana_phase33.ps1` crea el índice analítico
+`oscorp-session-risk`, sincroniza 398 sesiones con score, crea dashboard
+analítico con riesgo + mapa, exporta objetos versionados e importa el NDJSON
+en un space limpio temporal para validación.
+
+## Fase 33.5 — Consola LAB de simulaciones desde la app
+
+Objetivo: convertir el LAB en una experiencia operable desde la aplicación web,
+sin requerir que el evaluador ejecute ataques y pipeline desde terminal.
+
+Esta fase queda intencionalmente antes de la Fase 34 porque pertenece al modo
+LAB/local. No debe mezclar todavía decisiones del modo REAL/VPS.
+
+Flujo esperado:
+
+```text
+App web -> Laboratorio -> elegir escenario -> ejecutar
+          -> salida tipo terminal en pantalla
+          -> attacker-sim genera el ataque
+          -> pipeline-worker procesa cowrie.json
+          -> dashboard/sesiones/Telegram se actualizan
+```
+
+Escenarios permitidos:
+
+```text
+brute-force
+recon
+malware-download
+full
+```
+
+Restricciones de seguridad:
+
+- [ ] No ejecutar comandos arbitrarios enviados desde la web.
+- [ ] Usar allowlist estricta de escenarios conocidos.
+- [ ] Habilitar la funcionalidad solamente en `OSCORP_API_ENVIRONMENT=lab`.
+- [ ] Requerir rol `analyst` o `admin`.
+- [ ] Permitir una sola ejecución LAB concurrente.
+- [ ] No montar el Docker socket en el backend.
+- [ ] No exponer servicios internos del LAB fuera de la red Docker.
+- [ ] Registrar actor, escenario, timestamps, estado, exit code y resumen.
+
+Diseño técnico propuesto:
+
+- [ ] Crear tabla `lab_runs` para historial de ejecuciones.
+- [ ] Crear API backend para iniciar ejecución, consultar estado y leer logs.
+- [ ] Crear un `lab-runner` interno o adaptar `attacker-sim` con una API
+      privada mínima.
+- [ ] Ejecutar `./run_scenario.sh <scenario>` dentro del entorno LAB, capturando
+      stdout/stderr.
+- [ ] Al finalizar el ataque, llamar a `pipeline-worker /runs` en modo
+      incremental.
+- [ ] Persistir logs por ejecución con límite de tamaño para evitar crecimiento
+      indefinido.
+- [ ] Exponer consola en vivo mediante polling o SSE.
+- [ ] Invalidar/refrescar consultas de dashboard, sesiones, detalle y alertas al
+      finalizar.
+
+Pantalla web esperada:
+
+```text
+Laboratorio
+
+[ Fuerza bruta ]       [ Reconocimiento ]
+[ Descarga malware ]   [ Ataque completo ]
+
+Estado:
+queued / running / processing / completed / failed
+
+Terminal:
+[lab] iniciando escenario full
+[attacker-sim] verificando Cowrie...
+[attacker-sim] ejecutando brute-force...
+[pipeline] events_read=...
+[pipeline] alerts_sent=...
+[lab] completado
+```
+
+Validación requerida:
+
+- [ ] Ejecutar cada escenario desde la app.
+- [ ] Confirmar eventos nuevos en PostgreSQL y Elasticsearch.
+- [ ] Confirmar actualización automática del dashboard y tabla de sesiones.
+- [ ] Confirmar alertas Telegram cuando corresponda.
+- [ ] Verificar bloqueo de concurrencia.
+- [ ] Verificar permisos por rol.
+- [ ] Verificar que un escenario inválido sea rechazado.
+- [ ] Ejecutar pruebas backend/frontend/pipeline relevantes.
+- [ ] Ejecutar `.\scripts\validate_lab.ps1`.
+- [ ] Documentar evidencia en `docs/evidencias/`.
+
+Skills previstos:
+
+```text
+Buscar antes de implementar:
+- Docker / DevOps para runner interno y networking seguro.
+- FastAPI / arquitectura backend para jobs, logs y endpoints.
+- TanStack Query para polling, invalidación y estados de ejecución.
+- Seguridad para evitar command injection y exposición de secretos.
+- Testing frontend/backend para flujo LAB end-to-end.
+```
 
 ## Fase 34 — Arquitectura segura del modo REAL
 

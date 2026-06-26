@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import unittest
 import unittest.mock as mock
 from urllib.error import HTTPError, URLError
@@ -66,6 +67,21 @@ class TelegramAdapterSendTests(unittest.TestCase):
         self.assertIsNotNone(error)
         assert error is not None
         self.assertIn("429", error)
+
+    def test_send_uses_telegram_error_description(self) -> None:
+        adapter = self._adapter()
+        body = b'{"ok":false,"error_code":400,"description":"Bad Request: chat not found"}'
+        exc = HTTPError(
+            url="url",
+            code=400,
+            msg="Bad Request",
+            hdrs={},
+            fp=io.BytesIO(body),
+        )
+        with mock.patch("alerts.telegram.urllib.request.urlopen", side_effect=exc):
+            ok, error = adapter.send("test message")
+        self.assertFalse(ok)
+        self.assertEqual(error, "http_400: Bad Request: chat not found")
 
     def test_send_returns_false_on_url_error(self) -> None:
         adapter = self._adapter()

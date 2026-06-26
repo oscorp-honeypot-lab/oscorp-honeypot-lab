@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 
 _VT_BASE = "https://www.virustotal.com/api/v3/files"
+_USE_ENV = object()
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,8 +38,10 @@ def _empty(sha256: str, error: str) -> VtResult:
 
 
 class VirusTotalAdapter:
-    def __init__(self, api_key: str | None = None) -> None:
-        self._api_key = api_key or os.environ.get("VT_API_KEY") or ""
+    def __init__(self, api_key: str | None | object = _USE_ENV) -> None:
+        if api_key is _USE_ENV:
+            api_key = os.environ.get("VT_API_KEY")
+        self._api_key = str(api_key or "")
 
     def query(self, sha256: str) -> VtResult:
         if not self._api_key:
