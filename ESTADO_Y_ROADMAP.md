@@ -214,7 +214,7 @@ Actualización final de la tesis:            Pendiente hasta finalizar el sistem
 
 ## Última evidencia operativa disponible
 
-Última validación: **25 de junio de 2026**.
+Última validación: **26 de junio de 2026**.
 
 La validación operativa más reciente confirmó:
 
@@ -325,6 +325,12 @@ La validación operativa más reciente confirmó:
 - operación silenciosa cuando TELEGRAM_BOT_TOKEN/CHAT_ID no están configurados;
 - flujo validado: 12 alertas sent con mock, retry → failed verificado end-to-end;
 - 22 pruebas nuevas (15 telegram + 7 dispatcher) → 51 pipeline totales.
+- Fase 30 completada: motor de reportes diarios/semanales con migración
+  0013_report_runs, dataset JSONB y programación n8n daily/weekly;
+- 133 pruebas pipeline en Docker superadas y Alembic aplicado hasta 0013;
+- worker validado con triggered_by=n8n_schedule y report_runs daily/weekly
+  generados correctamente;
+- contrato n8n validado e importación del workflow versionado verificada.
 ```
 
 Se verificaron los diez servicios persistentes del perfil LAB en ejecución:
@@ -1229,14 +1235,20 @@ Evidencia: docs/evidencias/fase29_visualizacion_geografica.md
 LAB: IPs privadas (172.25.x.x) → private_range → sin geo_point en ES → by_country=[].
      GeoPanel muestra estado vacío explicativo. Correcto para el entorno LAB.
 
-## Fase 30 — Motor de reportes periódicos
+## Fase 30 — Motor de reportes periódicos ✅
 
 Objetivo: generar conjuntos de datos diarios y semanales.
 
-- [ ] Calcular eventos, IPs, sesiones, países, credenciales y comandos principales.
-- [ ] Incluir archivos, hashes maliciosos, sesiones críticas, MTTD y alertas fallidas.
-- [ ] Programar reportes diarios y semanales.
-- [ ] Validar resultados contra consultas directas.
+- [x] Calcular eventos, IPs, sesiones, países, credenciales y comandos principales.
+- [x] Incluir archivos, hashes maliciosos, sesiones críticas, MTTD y alertas fallidas.
+- [x] Programar reportes diarios y semanales.
+- [x] Validar resultados contra consultas directas.
+
+Evidencia: docs/evidencias/fase30_motor_reportes_periodicos.md
+
+LAB: reportes idempotentes por periodo en `report_runs`. Validación Docker:
+133 pruebas pipeline OK, Alembic en `0013_report_runs`, worker schedule OK
+y contrato n8n validado.
 
 ## Fase 31 — Formatos y entrega de reportes
 

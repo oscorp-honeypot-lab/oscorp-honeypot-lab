@@ -1,7 +1,7 @@
 {
   "id": "oscorp-cowrie-ndjson-pipeline",
   "name": "OSCORP - Cowrie Pipeline Orchestration",
-  "description": "Fase 12: n8n invoca al worker trazable, acepta errores parciales y confirma pipeline_runs.",
+  "description": "Fase 30: n8n invoca al worker trazable y agenda reportes diarios/semanales.",
   "active": false,
   "nodes": [
     {
@@ -17,6 +17,50 @@
     },
     {
       "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "id": "31d3d2e8-1f4c-4a23-9631-83021f6332e4",
+      "name": "Daily Report Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -720,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 3,
+              "triggerAtMinute": 15
+            }
+          ]
+        }
+      },
+      "id": "75663e8f-b87e-4eb6-92d1-9e70f0395b43",
+      "name": "Weekly Report Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -720,
+        440
+      ]
+    },
+    {
+      "parameters": {
         "jsCode": "const requestId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {\n  const random = Math.floor(Math.random() * 16);\n  const value = char === 'x' ? random : (random & 0x3) | 0x8;\n  return value.toString(16);\n});\nreturn [{\n  json: {\n    contract_version: '1.0',\n    request_id: requestId,\n    triggered_by: 'n8n_manual',\n    mode: 'incremental',\n    source: 'cowrie_ndjson'\n  }\n}];"
       },
       "id": "60457f6f-561d-4d35-bcdf-c8bf81e1ea7f",
@@ -26,6 +70,19 @@
       "position": [
         -480,
         0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const requestId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {\n  const random = Math.floor(Math.random() * 16);\n  const value = char === 'x' ? random : (random & 0x3) | 0x8;\n  return value.toString(16);\n});\nreturn [{\n  json: {\n    contract_version: '1.0',\n    request_id: requestId,\n    triggered_by: 'n8n_schedule',\n    mode: 'incremental',\n    source: 'cowrie_ndjson'\n  }\n}];"
+      },
+      "id": "a91a9959-d751-4b80-82bd-21d71fbe0885",
+      "name": "Build Scheduled Run Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        320
       ]
     },
     {
@@ -113,7 +170,40 @@
         ]
       ]
     },
+    "Daily Report Schedule": {
+      "main": [
+        [
+          {
+            "node": "Build Scheduled Run Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly Report Schedule": {
+      "main": [
+        [
+          {
+            "node": "Build Scheduled Run Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Build Run Request": {
+      "main": [
+        [
+          {
+            "node": "Invoke Pipeline Worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Scheduled Run Request": {
       "main": [
         [
           {

@@ -25,6 +25,7 @@ from alerts.telegram import TelegramAdapter
 from geo.adapter import IpApiAdapter
 from geo.elasticsearch import build_geo_lookup
 from geo.enricher import enrich_session_ips
+from reports.engine import generate_scheduled_reports
 from risk.storage import recalculate_scores
 from vt.adapter import VirusTotalAdapter
 from vt.enricher import enrich_download_hashes
@@ -1046,6 +1047,7 @@ def execute_pipeline(
                     events,
                     geo_lookup=geo_lookup,
                 )
+            generate_scheduled_reports(connection, pipeline_run_id=run_id)
             save_event_errors(
                 connection,
                 run_id=run_id,
