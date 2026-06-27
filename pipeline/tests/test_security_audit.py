@@ -18,20 +18,27 @@ import unittest
 from pathlib import Path
 
 
-def _find_project_root() -> Path:
+_SKIP_IN_CONTAINER = (
+    "docker-compose.yml not found — running inside Docker container "
+    "or outside the project tree. Security audit tests require host/CI context."
+)
+
+
+def _find_project_root() -> Path | None:
     here = Path(__file__).resolve().parent
     for candidate in [here, *here.parents]:
         if (candidate / "docker-compose.yml").exists():
             return candidate
-    raise RuntimeError("Cannot locate project root (no docker-compose.yml found)")
+    return None
 
 
 ROOT = _find_project_root()
 
 
+@unittest.skipUnless(ROOT is not None, _SKIP_IN_CONTAINER)
 class GitignoreTests(unittest.TestCase):
     def setUp(self) -> None:
-        self._content = (ROOT / ".gitignore").read_text(encoding="utf-8")
+        self._content = (ROOT / ".gitignore").read_text(encoding="utf-8")  # type: ignore[operator]
 
     def test_env_is_ignored(self) -> None:
         self.assertIn(".env\n", self._content)
@@ -46,6 +53,7 @@ class GitignoreTests(unittest.TestCase):
         self.assertIn("n8n/credentials/*", self._content)
 
 
+@unittest.skipUnless(ROOT is not None, _SKIP_IN_CONTAINER)
 class DockerImagePinningTests(unittest.TestCase):
     """Verify that externally-pulled images are pinned to a SHA-256 digest.
 
@@ -57,7 +65,7 @@ class DockerImagePinningTests(unittest.TestCase):
     _LOCAL_IMAGE_PREFIX = "oscorp/"
 
     def setUp(self) -> None:
-        self._compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+        self._compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")  # type: ignore[operator]
 
     def _external_image_lines(self) -> list[str]:
         return [
@@ -97,6 +105,7 @@ class DockerImagePinningTests(unittest.TestCase):
         )
 
 
+@unittest.skipUnless(ROOT is not None, _SKIP_IN_CONTAINER)
 class RequirementsPinningTests(unittest.TestCase):
     def _requirement_lines(self, path: Path) -> list[str]:
         return [
@@ -126,9 +135,10 @@ class RequirementsPinningTests(unittest.TestCase):
             )
 
 
+@unittest.skipUnless(ROOT is not None, _SKIP_IN_CONTAINER)
 class EnvExampleSecurityTests(unittest.TestCase):
     def setUp(self) -> None:
-        lines = (ROOT / ".env.example").read_text(encoding="utf-8").splitlines()
+        lines = (ROOT / ".env.example").read_text(encoding="utf-8").splitlines()  # type: ignore[operator]
         self._values: dict[str, str] = {}
         for line in lines:
             if "=" in line and not line.startswith("#"):
