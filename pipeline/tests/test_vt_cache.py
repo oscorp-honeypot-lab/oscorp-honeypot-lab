@@ -5,7 +5,6 @@ import unittest
 from vt.adapter import VtResult
 from vt.cache import get_cached_vt, store_vt
 
-
 _SHA = "aabbccdd" * 8
 
 _HIT_ROW = (25, 1, 44, 0, 0, 1719270000, -22, None)

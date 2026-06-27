@@ -6,7 +6,6 @@ import psycopg
 
 from .telegram import TelegramAdapter, format_alert_message
 
-
 MAX_ATTEMPTS: int = 3
 
 _LOAD_PENDING_SQL = """

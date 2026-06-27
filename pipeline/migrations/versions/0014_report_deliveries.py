@@ -9,10 +9,9 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
-
 
 revision: str = "0014_report_deliveries"
 down_revision: str | None = "0013_report_runs"

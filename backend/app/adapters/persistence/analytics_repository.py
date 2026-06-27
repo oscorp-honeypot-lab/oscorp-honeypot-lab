@@ -28,7 +28,6 @@ from app.domain.analytics import (
     VtStats,
 )
 
-
 COUNTRY_EXPRESSION = """
 COALESCE(
     e.raw_event ->> 'country',
@@ -207,7 +206,7 @@ class PostgresAnalyticsRepository:
             params["event_type"] = filters.event_type
         if filters.country:
             clauses.append(
-                f"""
+                """
                 EXISTS (
                     SELECT 1
                     FROM eventos ec
@@ -217,10 +216,10 @@ class PostgresAnalyticsRepository:
                           COALESCE(
                               ec.raw_event ->> 'country',
                               ec.raw_event ->> 'country_name',
-                              ec.raw_event #>> '{{geo,country}}',
-                              ec.raw_event #>> '{{geo,country_name}}',
-                              ec.raw_event #>> '{{geoip,country}}',
-                              ec.raw_event #>> '{{geoip,country_name}}'
+                              ec.raw_event #>> '{geo,country}',
+                              ec.raw_event #>> '{geo,country_name}',
+                              ec.raw_event #>> '{geoip,country}',
+                              ec.raw_event #>> '{geoip,country_name}'
                           )
                       ) = LOWER(:country)
                 )

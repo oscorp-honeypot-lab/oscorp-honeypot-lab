@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
 import os
+from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
 import psycopg
 import pytest
+from fastapi.testclient import TestClient
 
 from app.main import app
-
 
 SENSOR = "test-analytics"
 

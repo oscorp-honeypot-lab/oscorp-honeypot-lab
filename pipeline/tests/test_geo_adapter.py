@@ -5,7 +5,7 @@ import unittest
 import unittest.mock as mock
 from urllib.error import HTTPError, URLError
 
-from geo.adapter import GeoResult, IpApiAdapter
+from geo.adapter import IpApiAdapter
 
 
 class PrivateIpTests(unittest.TestCase):

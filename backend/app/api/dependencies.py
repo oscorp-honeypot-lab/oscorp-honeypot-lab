@@ -5,12 +5,12 @@ from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, Request, status
 
+from app.application.analytics_service import AnalyticsService
 from app.application.auth_service import (
     AuthenticationRequired,
     AuthService,
     CsrfFailed,
 )
-from app.application.analytics_service import AnalyticsService
 from app.application.export_service import ExportService
 from app.application.health_service import HealthService
 from app.application.lab_service import LabService

@@ -10,7 +10,6 @@ from app.application.export_service import ExportFailed, ExportService
 from app.domain.analytics import EventFilters, ExportArtifact, SessionFilters
 from app.domain.identity import Role, UserIdentity
 
-
 router = APIRouter(prefix="/exports", tags=["exports"])
 Viewer = Annotated[UserIdentity, Depends(require_role(Role.VIEWER))]
 Service = Annotated[ExportService, Depends(get_export_service)]

@@ -3,9 +3,9 @@ from __future__ import annotations
 import os
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
 import psycopg
 import pytest
+from fastapi.testclient import TestClient
 
 from app.main import app
 

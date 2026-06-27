@@ -5,7 +5,6 @@ import unittest
 from geo.adapter import GeoResult
 from geo.enricher import enrich_session_ips
 
-
 _GERMANY = GeoResult(
     ip="8.8.8.8",
     country="Germany",

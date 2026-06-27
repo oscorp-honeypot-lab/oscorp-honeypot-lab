@@ -6,7 +6,6 @@ import psycopg
 
 from .criteria import AlertSpec, evaluate_session_alerts
 
-
 LOAD_SESSIONS_FOR_ALERTS_SQL = """
 SELECT
     s.session_key,

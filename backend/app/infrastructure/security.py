@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from hashlib import sha256
 import secrets
+from hashlib import sha256
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError

@@ -5,7 +5,7 @@ import json
 import urllib.error
 import urllib.request
 import uuid
-from typing import Any, Callable, Coroutine
+from typing import Any
 
 from app.domain.analytics import LabRun
 from app.domain.ports.analytics_repository import AnalyticsRepository

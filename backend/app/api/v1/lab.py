@@ -14,7 +14,6 @@ from app.application.lab_service import (
 )
 from app.domain.identity import Role, UserIdentity
 
-
 router = APIRouter(prefix="/lab", tags=["lab"])
 Viewer = Annotated[UserIdentity, Depends(require_role(Role.VIEWER))]
 AnalystCsrf = Annotated[UserIdentity, Depends(require_role_csrf(Role.ANALYST))]

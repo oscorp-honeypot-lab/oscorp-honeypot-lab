@@ -4,9 +4,7 @@ import unittest
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from alerts.dispatcher import dispatch_pending_alerts, MAX_ATTEMPTS
-from alerts.telegram import TelegramAdapter
-
+from alerts.dispatcher import MAX_ATTEMPTS, dispatch_pending_alerts
 
 BASE_TS = datetime(2026, 6, 25, 21, 0, tzinfo=timezone.utc)
 

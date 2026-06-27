@@ -11,7 +11,6 @@ from reports.engine import (
     store_report_run,
 )
 
-
 REFERENCE = datetime(2026, 6, 26, 12, 30, tzinfo=timezone.utc)
 DAY_START = datetime(2026, 6, 25, tzinfo=timezone.utc)
 DAY_END = datetime(2026, 6, 26, tzinfo=timezone.utc)

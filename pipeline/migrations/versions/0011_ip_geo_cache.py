@@ -9,9 +9,8 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 revision: str = "0011_ip_geo_cache"
 down_revision: str | None = "0010_alert_attempt_count"

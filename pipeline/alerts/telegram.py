@@ -6,7 +6,6 @@ import urllib.request
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 
-
 _TRIGGER_TYPE_LABELS: dict[str, str] = {
     "high_risk": "ALTO RIESGO",
     "successful_login": "LOGIN EXITOSO",

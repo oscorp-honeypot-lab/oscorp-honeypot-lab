@@ -9,7 +9,6 @@ from app.application.report_service import ReportDeliveryFailed, ReportService
 from app.domain.analytics import ReportRun
 from app.domain.identity import Role, UserIdentity
 
-
 REPORT_ID = UUID("10000000-0000-4000-8000-000000000031")
 USER_ID = UUID("20000000-0000-4000-8000-000000000031")
 

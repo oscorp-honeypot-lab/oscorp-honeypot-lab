@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import csv
 from dataclasses import asdict
 from datetime import datetime, timezone
-import csv
 from io import StringIO
 from typing import Iterable
 

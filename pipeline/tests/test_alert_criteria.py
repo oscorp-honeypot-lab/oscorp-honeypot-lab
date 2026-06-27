@@ -3,8 +3,7 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timezone
 
-from alerts.criteria import AlertSpec, evaluate_session_alerts
-
+from alerts.criteria import evaluate_session_alerts
 
 BASE_TS = datetime(2026, 6, 25, 18, 0, tzinfo=timezone.utc)
 

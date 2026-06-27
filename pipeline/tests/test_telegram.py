@@ -4,7 +4,6 @@ import io
 import unittest
 import unittest.mock as mock
 from urllib.error import HTTPError, URLError
-from urllib.request import Request
 
 from alerts.telegram import TelegramAdapter, format_alert_message
 

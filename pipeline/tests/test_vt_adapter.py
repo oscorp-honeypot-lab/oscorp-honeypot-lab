@@ -5,8 +5,7 @@ import unittest
 import unittest.mock as mock
 from urllib.error import HTTPError, URLError
 
-from vt.adapter import VtResult, VirusTotalAdapter
-
+from vt.adapter import VirusTotalAdapter
 
 _GOOD_PAYLOAD = {
     "data": {

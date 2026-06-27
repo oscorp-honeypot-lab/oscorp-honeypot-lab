@@ -14,8 +14,8 @@ from app.domain.analytics import (
     TimelinePoint,
     VtStats,
 )
-from app.domain.ports.analytics_repository import AnalyticsRepository
 from app.domain.identity import UserIdentity
+from app.domain.ports.analytics_repository import AnalyticsRepository
 
 
 class SessionNotFound(Exception):

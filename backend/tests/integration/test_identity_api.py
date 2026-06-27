@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from hashlib import sha256
 import os
+from hashlib import sha256
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
 import psycopg
 import pytest
+from fastapi.testclient import TestClient
 
 from app.main import app
 

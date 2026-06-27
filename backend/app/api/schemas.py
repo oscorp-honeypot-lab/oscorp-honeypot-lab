@@ -14,7 +14,6 @@ from app.domain.analytics import (
     GeoStats,
     LabRun,
     MttdStats,
-    MttdTriggerStat,
     Page,
     ReportDelivery,
     ReportRun,

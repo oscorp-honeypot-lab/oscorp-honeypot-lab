@@ -8,7 +8,6 @@ import pytest
 from app.application.analytics_service import AnalyticsService
 from app.domain.analytics import AlertItem, Page
 
-
 BASE_TS = datetime(2026, 6, 25, 18, 0, tzinfo=timezone.utc)
 
 ALERT_ID = uuid4()

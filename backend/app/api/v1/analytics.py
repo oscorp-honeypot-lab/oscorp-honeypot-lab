@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Annotated
-
 from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
@@ -28,7 +27,6 @@ from app.api.schemas import (
 from app.application.analytics_service import AnalyticsService, SessionNotFound
 from app.domain.analytics import EventFilters, SessionFilters
 from app.domain.identity import Role, UserIdentity
-
 
 router = APIRouter(tags=["analytics"])
 Viewer = Annotated[UserIdentity, Depends(require_role(Role.VIEWER))]

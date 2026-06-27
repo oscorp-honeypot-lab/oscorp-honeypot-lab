@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import os
+from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi.testclient import TestClient
 import psycopg
-from psycopg.types.json import Jsonb
 import pytest
+from fastapi.testclient import TestClient
+from psycopg.types.json import Jsonb
 
 from app.main import app
-
 
 REPORT_ID = UUID("31000000-0000-4000-8000-000000000031")
 

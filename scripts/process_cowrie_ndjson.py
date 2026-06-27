@@ -30,7 +30,6 @@ from risk.storage import recalculate_scores
 from vt.adapter import VirusTotalAdapter
 from vt.enricher import enrich_download_hashes
 
-
 INSERT_EVENT_SQL = """
 INSERT INTO eventos (
     event_hash,

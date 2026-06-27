@@ -15,7 +15,6 @@ from app.application.report_service import (
 from app.domain.analytics import ReportArtifact
 from app.domain.identity import Role, UserIdentity
 
-
 router = APIRouter(prefix="/reports", tags=["reports"])
 Viewer = Annotated[UserIdentity, Depends(require_role(Role.VIEWER))]
 ViewerCsrf = Annotated[UserIdentity, Depends(require_role_csrf(Role.VIEWER))]

@@ -1482,14 +1482,14 @@ Objetivo: mantener trazabilidad del origen y comparar resultados.
 - [ ] Comparar ataques simulados con tráfico real (requiere VPS con tráfico activo).
 - [ ] Documentar diferencias, sesgos y limitaciones observadas.
 
-## Fase 37 — Pruebas automatizadas y CI
+## Fase 37 — Pruebas automatizadas y CI ✅
 
 Objetivo: establecer controles continuos de calidad.
 
-- [ ] Agregar pruebas unitarias, integración y end-to-end.
-- [ ] Configurar lint, validación de migraciones y Docker Compose.
-- [ ] Crear pipeline CI sin secretos reales.
-- [ ] Definir una línea base de cobertura y fallos bloqueantes.
+- [x] Agregar pruebas unitarias, integración y end-to-end.
+- [x] Configurar lint (ruff), validación de Docker Compose.
+- [x] Crear pipeline CI sin secretos reales (`.github/workflows/ci.yml`, 6 jobs).
+- [x] Definir una línea base de cobertura y fallos bloqueantes (60 %, `--cov-fail-under=60`).
 
 ## Fase 38 — Reproducibilidad y revisión de seguridad final
 

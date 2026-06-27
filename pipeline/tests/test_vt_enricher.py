@@ -5,7 +5,6 @@ import unittest
 from vt.adapter import VtResult
 from vt.enricher import enrich_download_hashes
 
-
 _SHA1 = "aabb" * 16
 _SHA2 = "ccdd" * 16
 

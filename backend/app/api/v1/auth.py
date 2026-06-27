@@ -27,7 +27,6 @@ from app.application.auth_service import (
 )
 from app.domain.identity import Role, UserIdentity
 
-
 router = APIRouter(tags=["identity"])
 
 

@@ -6,8 +6,12 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from .rules import ACTIVE_RULESET, RiskRuleSet
-from .scoring import RiskAssessment, SessionRiskInput, evaluate_session, is_cloud_provider
-
+from .scoring import (
+    RiskAssessment,
+    SessionRiskInput,
+    evaluate_session,
+    is_cloud_provider,
+)
 
 LOAD_SESSIONS_SQL = """
 SELECT

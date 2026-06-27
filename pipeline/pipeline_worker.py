@@ -13,7 +13,6 @@ from typing import Any
 
 from process_cowrie_ndjson import execute_pipeline
 
-
 MAX_REQUEST_BYTES = 64 * 1024
 RUN_LOCK = threading.Lock()
 

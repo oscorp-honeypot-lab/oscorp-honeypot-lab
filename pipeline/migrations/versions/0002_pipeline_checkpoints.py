@@ -9,9 +9,8 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 revision: str = "0002_pipeline_checkpoints"
 down_revision: str | None = "0001_initial_schema"

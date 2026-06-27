@@ -9,7 +9,6 @@ from app.api.schemas import AlertPageResponse
 from app.application.analytics_service import AnalyticsService
 from app.domain.identity import Role, UserIdentity
 
-
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
 Viewer = Annotated[UserIdentity, Depends(require_role(Role.VIEWER))]

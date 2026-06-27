@@ -9,9 +9,8 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 revision: str = "0010_alert_attempt_count"
 down_revision: str | None = "0009_alerts_model"

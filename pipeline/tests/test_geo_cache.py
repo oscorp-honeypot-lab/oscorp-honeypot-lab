@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from geo.adapter import GeoResult
 from geo.cache import get_cached_geo, store_geo
 
-
 BASE_TS = datetime(2026, 6, 25, 21, 0, tzinfo=timezone.utc)
 
 _GERMANY = GeoResult(

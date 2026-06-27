@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import csv
+import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from html import escape
 from io import StringIO
-import json
 from typing import Any, Protocol
 
 from app.domain.analytics import ReportArtifact, ReportDelivery, ReportRun

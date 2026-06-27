@@ -4,24 +4,24 @@ from contextlib import asynccontextmanager
 from time import perf_counter
 from uuid import uuid4
 
+import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import structlog
 
-from app.adapters.persistence.identity_repository import (
-    PostgresIdentityRepository,
-)
 from app.adapters.persistence.analytics_repository import (
     PostgresAnalyticsRepository,
+)
+from app.adapters.persistence.identity_repository import (
+    PostgresIdentityRepository,
 )
 from app.adapters.persistence.postgres_health_repository import (
     PostgresHealthRepository,
 )
 from app.api.middleware.security import CsrfMiddleware, SecurityHeadersMiddleware
 from app.api.v1.router import api_router
-from app.application.auth_service import AuthService
 from app.application.analytics_service import AnalyticsService
+from app.application.auth_service import AuthService
 from app.application.export_service import ExportService
 from app.application.health_service import HealthService
 from app.application.lab_service import LabService
@@ -31,7 +31,6 @@ from app.infrastructure.database import create_engine, create_session_factory
 from app.infrastructure.logging import configure_logging
 from app.infrastructure.security import PasswordManager
 from app.infrastructure.telegram import TelegramAdapter
-
 
 settings = get_settings()
 configure_logging(settings.log_level)

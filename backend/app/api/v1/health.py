@@ -9,7 +9,6 @@ from app.api.schemas import HealthResponse
 from app.application.health_service import HealthService
 from app.domain.health import HealthStatus
 
-
 router = APIRouter(prefix="/health", tags=["health"])
 
 

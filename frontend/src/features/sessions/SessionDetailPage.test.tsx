@@ -25,6 +25,7 @@ const baseSession = {
   reviewed_at: null,
   reviewed_by: null,
   reviewed_by_username: null,
+  source_mode: "lab",
 };
 
 const baseData: SessionDetailResponse = {

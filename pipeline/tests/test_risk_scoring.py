@@ -3,7 +3,12 @@ from __future__ import annotations
 import unittest
 
 from risk.rules import RiskLevel
-from risk.scoring import SessionRiskInput, command_matches, evaluate_session, is_cloud_provider
+from risk.scoring import (
+    SessionRiskInput,
+    command_matches,
+    evaluate_session,
+    is_cloud_provider,
+)
 
 
 class RiskScoringTests(unittest.TestCase):
