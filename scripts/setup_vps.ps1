@@ -140,14 +140,29 @@ else
   SUDO=
 fi
 
-echo "[vps] Preparando paquetes base..."
+echo "[vps] Eliminando paquetes conflictivos con Docker..."
 export DEBIAN_FRONTEND=noninteractive
+for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd containerd.io runc; do
+  `$SUDO apt-get remove -y "`$pkg" 2>/dev/null || true
+done
+`$SUDO apt-get autoremove -y
+
+echo "[vps] Configurando repositorio oficial de Docker..."
 `$SUDO apt-get update
-`$SUDO apt-get install -y ca-certificates curl docker.io docker-compose-v2 ufw
+`$SUDO apt-get install -y ca-certificates curl
+`$SUDO install -m 0755 -d /etc/apt/keyrings
+`$SUDO curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+`$SUDO chmod a+r /etc/apt/keyrings/docker.asc
+
+. /etc/os-release
+echo "deb [arch=`$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu `${VERSION_CODENAME} stable" | `$SUDO tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+`$SUDO apt-get update
+`$SUDO apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin ufw
 `$SUDO systemctl enable --now docker
 
-if ! docker compose version >/dev/null 2>&1; then
-  echo "[vps] docker compose no esta disponible despues de instalar docker-compose-v2." >&2
+if ! `$SUDO docker compose version >/dev/null 2>&1; then
+  echo "[vps] docker compose plugin no esta disponible." >&2
   exit 1
 fi
 
