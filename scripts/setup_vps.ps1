@@ -174,9 +174,9 @@ echo "[vps] Creando directorios en `$REMOTE_DIR..."
 
 echo "[vps] Escribiendo cowrie.cfg con output JSON habilitado..."
 `$SUDO tee "`$REMOTE_DIR/etc/cowrie.cfg" >/dev/null <<'COWRIE_CFG'
-[output_jsonfile]
+[output_jsonlog]
 enabled = true
-logfile = cowrie.json
+logfile = /cowrie/cowrie-git/var/log/cowrie/cowrie.json
 COWRIE_CFG
 
 echo "[vps] Escribiendo docker-compose.yml de Cowrie..."
