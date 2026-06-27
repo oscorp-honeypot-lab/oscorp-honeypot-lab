@@ -66,8 +66,8 @@ def isolated_report() -> None:
                 """,
                 (
                     REPORT_ID,
-                    datetime(2026, 6, 26, tzinfo=timezone.utc),
-                    datetime(2026, 6, 27, tzinfo=timezone.utc),
+                    datetime(2099, 12, 31, tzinfo=timezone.utc),
+                    datetime(2100, 1, 1, tzinfo=timezone.utc),
                     Jsonb(dataset),
                 ),
             )
