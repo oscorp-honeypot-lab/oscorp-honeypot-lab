@@ -1,5 +1,5 @@
 param(
-    [string]$Host,
+    [string]$VpsHost,
     [string]$User,
     [int]$SshPort,
     [string]$RemoteDir,
@@ -74,7 +74,7 @@ function ConvertTo-BashSingleQuote {
     return "'" + ($Value -replace "'", "'\''") + "'"
 }
 
-$Host = Resolve-Setting -Value $Host -EnvName "VPS_HOST"
+$VpsHost = Resolve-Setting -Value $VpsHost -EnvName "VPS_HOST"
 $User = Resolve-Setting -Value $User -EnvName "VPS_USER" -DefaultValue "root"
 $SshPortValue = if ($PSBoundParameters.ContainsKey("SshPort")) {
     [string]$SshPort
@@ -88,8 +88,8 @@ $CowriePortValue = if ($PSBoundParameters.ContainsKey("CowriePort")) {
     Resolve-Setting -Value "" -EnvName "VPS_COWRIE_SSH_PORT" -DefaultValue "2222"
 }
 
-if ([string]::IsNullOrWhiteSpace($Host)) {
-    throw "Defina VPS_HOST en .env o pase -Host."
+if ([string]::IsNullOrWhiteSpace($VpsHost)) {
+    throw "Defina VPS_HOST en .env o pase -VpsHost."
 }
 if ([string]::IsNullOrWhiteSpace($User)) {
     throw "Defina VPS_USER en .env o pase -User."
@@ -113,7 +113,7 @@ if ($RemoteDir -notmatch "^/[A-Za-z0-9._/-]+$") {
 Require-Command -Name "ssh"
 Require-Command -Name "scp"
 
-Write-Host "[vps] Objetivo: $User@$Host puerto SSH $SshPort"
+Write-Host "[vps] Objetivo: $User@$VpsHost puerto SSH $SshPort"
 Write-Host "[vps] Cowrie quedara publicado en el puerto TCP $CowriePort de la VPS."
 Write-Host "[vps] No se guardan contrasenas en el repo. Si usa password SSH, ssh/scp la pediran interactivamente."
 
@@ -217,7 +217,7 @@ echo "[vps] OK. Cowrie escucha en el puerto `$COWRIE_PORT y escribe en `$REMOTE_
 $temporaryScript = Join-Path ([System.IO.Path]::GetTempPath()) "oscorp_setup_vps.sh"
 [System.IO.File]::WriteAllText($temporaryScript, $remoteScript, [System.Text.UTF8Encoding]::new($false))
 
-$sshTarget = "$User@$Host"
+$sshTarget = "$User@$VpsHost"
 $remoteTmp = "/tmp/oscorp_setup_vps.sh"
 $sshBaseArgs = @("-p", [string]$SshPort, "-o", "ServerAliveInterval=30", "-o", "ServerAliveCountMax=4", $sshTarget)
 
