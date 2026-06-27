@@ -201,8 +201,9 @@ YAML
 COWRIE_PUBLIC_PORT=`$COWRIE_PORT
 ENV
 
-echo "[vps] Levantando Cowrie..."
+echo "[vps] Recreando contenedor Cowrie con bind mounts..."
 cd "`$REMOTE_DIR"
+`$SUDO docker rm -f oscorp_vps_cowrie 2>/dev/null || true
 `$SUDO docker compose --env-file .env up -d
 
 if [ "`$SKIP_FIREWALL" != "1" ] && command -v ufw >/dev/null 2>&1; then
