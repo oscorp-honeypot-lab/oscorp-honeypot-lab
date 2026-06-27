@@ -227,6 +227,8 @@ services:
       - head
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-oscorp}:${POSTGRES_PASSWORD:-oscorp123}@postgres:5432/${POSTGRES_DB:-oscorp}
+    volumes:
+      - ./pipeline/migrations/versions:/app/migrations/versions:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -331,6 +333,8 @@ services:
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     volumes:
       - ./cowrie/logs:/files/cowrie:ro
+      - ./scripts/process_cowrie_ndjson.py:/app/process_cowrie_ndjson.py:ro
+      - ./pipeline/pipeline_worker.py:/app/pipeline_worker.py:ro
     depends_on:
       postgres:
         condition: service_healthy
