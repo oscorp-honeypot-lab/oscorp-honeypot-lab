@@ -48,6 +48,7 @@ class SessionFilters:
     event_type: str | None = None
     risk_level: str | None = None
     reviewed: bool | None = None
+    source_mode: str | None = None
     sort_by: str = "last_event_at"
     sort_order: str = "desc"
 
@@ -94,6 +95,7 @@ class SessionListItem:
     reviewed_at: datetime | None
     reviewed_by: UUID | None
     reviewed_by_username: str | None
+    source_mode: str
 
 
 @dataclass(frozen=True, slots=True)

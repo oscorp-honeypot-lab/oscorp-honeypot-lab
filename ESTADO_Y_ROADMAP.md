@@ -1467,14 +1467,20 @@ continua con evidencia operativa.
 
 Evidencia: docs/evidencias/fase35_operacion_vps.md
 
-## Fase 36 — Separación y comparación LAB/REAL
+## Fase 36 — Separación y comparación LAB/REAL ✅
 
 Objetivo: mantener trazabilidad del origen y comparar resultados.
 
-- [ ] Separar datos LAB y REAL en almacenamiento y consultas.
-- [ ] Etiquetar origen, sensor y ambiente.
-- [ ] Comparar ataques simulados con tráfico real.
-- [ ] Documentar diferencias, sesgos y limitaciones.
+- [x] Separar datos LAB y REAL en almacenamiento y consultas.
+- [x] Etiquetar origen con campo `source_mode` ('lab'|'real') en eventos y sesiones.
+- [x] Migración `0016_source_mode` con DEFAULT 'lab' y CHECK constraint.
+- [x] Pipeline: `execute_pipeline(source_mode=)` propaga el modo a cada evento/sesión.
+- [x] Pipeline worker: `validate_request` acepta y valida `source_mode`.
+- [x] Backend API: filtro `?source_mode=lab|real` en `GET /sessions`.
+- [x] Frontend: badge LAB/REAL en tabla y detalle de sesión; filtro en formulario.
+- [x] Tests: 6 unit tests pipeline + 4 integration tests backend, todos verdes.
+- [ ] Comparar ataques simulados con tráfico real (requiere VPS con tráfico activo).
+- [ ] Documentar diferencias, sesgos y limitaciones observadas.
 
 ## Fase 37 — Pruebas automatizadas y CI
 

@@ -32,6 +32,7 @@ type Filters = {
   username: string;
   riskLevel: string;
   reviewed: string;
+  sourceMode: string;
 };
 
 const emptyFilters: Filters = {
@@ -40,6 +41,7 @@ const emptyFilters: Filters = {
   username: "",
   riskLevel: "",
   reviewed: "",
+  sourceMode: "",
 };
 
 const dateTime = new Intl.DateTimeFormat("es-AR", {
@@ -121,6 +123,19 @@ const columns: ColumnDef<SessionListItemResponse>[] = [
     ),
   },
   {
+    accessorKey: "source_mode",
+    header: "Modo",
+    enableSorting: false,
+    cell: ({ getValue }) => {
+      const mode = String(getValue());
+      return (
+        <span className={`source-mode-badge source-mode-${mode}`}>
+          {mode === "real" ? "REAL" : "LAB"}
+        </span>
+      );
+    },
+  },
+  {
     accessorKey: "reviewed",
     header: "Revisión",
     enableSorting: false,
@@ -151,6 +166,7 @@ export function SessionsPage() {
     riskLevel: filters.riskLevel,
     reviewed:
       filters.reviewed === "" ? undefined : filters.reviewed === "true",
+    sourceMode: filters.sourceMode || undefined,
     sortBy: activeSort.id as SessionSortField,
     sortOrder: activeSort.desc ? "desc" : "asc",
   };
@@ -262,6 +278,22 @@ export function SessionsPage() {
             <option value="">Todas</option>
             <option value="false">Pendientes</option>
             <option value="true">Revisadas</option>
+          </select>
+        </label>
+        <label>
+          Modo
+          <select
+            value={draftFilters.sourceMode}
+            onChange={(event) =>
+              setDraftFilters({
+                ...draftFilters,
+                sourceMode: event.target.value,
+              })
+            }
+          >
+            <option value="">Todos</option>
+            <option value="lab">LAB</option>
+            <option value="real">REAL</option>
           </select>
         </label>
         <div className="filter-actions">

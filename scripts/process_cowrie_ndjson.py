@@ -46,7 +46,8 @@ INSERT INTO eventos (
     command_input,
     url,
     shasum,
-    raw_event
+    raw_event,
+    source_mode
 )
 VALUES (
     %(event_hash)s,
@@ -62,7 +63,8 @@ VALUES (
     %(command_input)s,
     %(url)s,
     %(shasum)s,
-    %(raw_event)s
+    %(raw_event)s,
+    %(source_mode)s
 )
 ON CONFLICT (event_hash) DO NOTHING
 """
@@ -133,7 +135,8 @@ aggregated AS (
         (ARRAY_AGG(e.username ORDER BY e.timestamp_evento DESC, e.id DESC)
             FILTER (WHERE e.username IS NOT NULL))[1] AS last_username,
         BOOL_OR(e.eventid = 'cowrie.login.success') AS has_successful_login,
-        BOOL_OR(e.eventid = 'cowrie.session.file_download') AS has_download
+        BOOL_OR(e.eventid = 'cowrie.session.file_download') AS has_download,
+        MIN(e.source_mode) AS source_mode
     FROM eventos e
     JOIN targets t
       ON t.sensor = COALESCE(e.sensor, 'unknown')
@@ -146,7 +149,7 @@ INSERT INTO sessions (
     duration_seconds, lifecycle_status, event_count,
     login_success_count, login_failed_count, command_count,
     command_failed_count, download_count, first_username,
-    last_username, has_successful_login, has_download
+    last_username, has_successful_login, has_download, source_mode
 )
 SELECT * FROM aggregated
 ON CONFLICT (session_key) DO UPDATE
@@ -170,6 +173,7 @@ SET
     has_successful_login = EXCLUDED.has_successful_login,
     has_download = EXCLUDED.has_download,
     updated_at = NOW()
+    -- source_mode intentionally omitted: once set, never changed
 """
 
 FINGERPRINT_BYTES = 4096
@@ -583,11 +587,13 @@ def save_event_errors(
 def insert_events(
     connection: psycopg.Connection[Any],
     events: list[dict[str, Any]],
+    source_mode: str = "lab",
 ) -> int:
+    tagged = [{**event, "source_mode": source_mode} for event in events]
     with connection.cursor() as cursor:
         cursor.execute("SELECT COUNT(*) FROM eventos")
         before = int(cursor.fetchone()[0])
-        cursor.executemany(INSERT_EVENT_SQL, events)
+        cursor.executemany(INSERT_EVENT_SQL, tagged)
         cursor.execute("SELECT COUNT(*) FROM eventos")
         after = int(cursor.fetchone()[0])
     connection.commit()
@@ -876,6 +882,7 @@ def execute_pipeline(
     triggered_by: str,
     mode: str,
     source: str = "cowrie_ndjson",
+    source_mode: str = "lab",
 ) -> dict[str, Any]:
     if triggered_by not in {"n8n_manual", "n8n_schedule", "recovery"}:
         return build_result(
@@ -900,6 +907,14 @@ def execute_pipeline(
             errors_count=1,
             error_code="invalid_source",
             error_detail=f"Unsupported source: {source}",
+        )
+    if source_mode not in {"lab", "real"}:
+        return build_result(
+            request_id,
+            "failed",
+            errors_count=1,
+            error_code="invalid_source_mode",
+            error_detail=f"Unsupported source_mode: {source_mode}",
         )
 
     log_path = Path(os.environ.get("COWRIE_LOG_PATH", "/files/cowrie/cowrie.json"))
@@ -1032,7 +1047,7 @@ def execute_pipeline(
         partial_errors = len(batch.invalid_events)
         try:
             if events:
-                inserted = insert_events(connection, events)
+                inserted = insert_events(connection, events, source_mode)
                 session_keys = refresh_sessions(connection, events)
                 recalculate_scores(connection, session_keys)
                 generate_session_alerts(connection, session_keys, run_id)

@@ -140,6 +140,11 @@ export function SessionDetailView({
         </div>
 
         <div className="detail-header-side">
+          <span
+            className={`source-mode-badge source-mode-${session.source_mode}`}
+          >
+            {session.source_mode === "real" ? "REAL" : "LAB"}
+          </span>
           <span className={`risk-badge risk-${session.risk_level ?? "none"}`}>
             {riskLabel(session.risk_level)}
             {session.risk_score != null && ` · ${session.risk_score}`}

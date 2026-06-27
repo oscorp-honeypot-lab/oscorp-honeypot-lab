@@ -89,6 +89,10 @@ async def sessions(
         Query(pattern=r"^(low|medium|high|critical)$"),
     ] = None,
     reviewed: bool | None = None,
+    source_mode: Annotated[
+        str | None,
+        Query(pattern=r"^(lab|real)$"),
+    ] = None,
     sort_by: Annotated[
         str,
         Query(
@@ -112,6 +116,7 @@ async def sessions(
             event_type=event_type,
             risk_level=risk_level,
             reviewed=reviewed,
+            source_mode=source_mode,
             sort_by=sort_by,
             sort_order=sort_order,
         ),

@@ -40,6 +40,7 @@ export type SessionQuery = {
   username?: string;
   riskLevel?: string;
   reviewed?: boolean;
+  sourceMode?: string;
   sortBy: SessionSortField;
   sortOrder: "asc" | "desc";
 };
@@ -182,6 +183,7 @@ export async function getSessions(
         username: query.username || undefined,
         risk_level: query.riskLevel || undefined,
         reviewed: query.reviewed,
+        source_mode: query.sourceMode || undefined,
         sort_by: query.sortBy,
         sort_order: query.sortOrder,
       },

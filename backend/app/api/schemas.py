@@ -154,6 +154,7 @@ class SessionListItemResponse(BaseModel):
     reviewed_at: datetime | None
     reviewed_by: UUID | None
     reviewed_by_username: str | None
+    source_mode: str
 
 
 class EventListItemResponse(BaseModel):

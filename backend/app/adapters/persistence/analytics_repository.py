@@ -74,7 +74,8 @@ SELECT
     s.reviewed,
     s.reviewed_at,
     s.reviewed_by,
-    reviewer.username AS reviewed_by_username
+    reviewer.username AS reviewed_by_username,
+    s.source_mode
 FROM sessions s
 LEFT JOIN session_risk_scores r
   ON r.session_key = s.session_key
@@ -143,6 +144,7 @@ class PostgresAnalyticsRepository:
             reviewed_at=row.reviewed_at,
             reviewed_by=row.reviewed_by,
             reviewed_by_username=row.reviewed_by_username,
+            source_mode=row.source_mode,
         )
 
     @staticmethod
@@ -231,6 +233,9 @@ class PostgresAnalyticsRepository:
         if filters.reviewed is not None:
             clauses.append("s.reviewed = :reviewed")
             params["reviewed"] = filters.reviewed
+        if filters.source_mode is not None:
+            clauses.append("s.source_mode = :source_mode")
+            params["source_mode"] = filters.source_mode
         return (
             " WHERE " + " AND ".join(clauses) if clauses else "",
             params,

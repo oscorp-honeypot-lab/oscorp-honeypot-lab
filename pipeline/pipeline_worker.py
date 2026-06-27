@@ -28,6 +28,7 @@ def validate_request(payload: Any) -> tuple[dict[str, str] | None, str | None]:
         "triggered_by",
         "mode",
         "source",
+        "source_mode",
     }
     unknown = sorted(set(payload) - allowed)
     if unknown:
@@ -52,12 +53,17 @@ def validate_request(payload: Any) -> tuple[dict[str, str] | None, str | None]:
     if source != "cowrie_ndjson":
         return None, "source must be cowrie_ndjson."
 
+    source_mode = payload.get("source_mode", "lab")
+    if source_mode not in {"lab", "real"}:
+        return None, "source_mode must be 'lab' or 'real'."
+
     return {
         "contract_version": "1.0",
         "request_id": request_id,
         "triggered_by": triggered_by,
         "mode": mode,
         "source": source,
+        "source_mode": source_mode,
     }, None
 
 
@@ -142,6 +148,7 @@ class PipelineWorkerHandler(BaseHTTPRequestHandler):
                     triggered_by=run_request["triggered_by"],
                     mode=run_request["mode"],
                     source=run_request["source"],
+                    source_mode=run_request["source_mode"],
                 )
             except Exception as exc:
                 transport_error = True

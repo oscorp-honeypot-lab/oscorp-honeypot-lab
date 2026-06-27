@@ -551,6 +551,10 @@ export type SessionListItemResponse = {
      * Reviewed By Username
      */
     reviewed_by_username: string | null;
+    /**
+     * Source Mode
+     */
+    source_mode: string;
 };
 
 /**
@@ -1029,6 +1033,10 @@ export type SessionsApiV1SessionsGetData = {
          * Reviewed
          */
         reviewed?: boolean | null;
+        /**
+         * Source Mode
+         */
+        source_mode?: string | null;
         /**
          * Sort By
          */

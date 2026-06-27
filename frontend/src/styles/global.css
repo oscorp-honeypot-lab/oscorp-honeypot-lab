@@ -994,7 +994,8 @@ svg {
 
 .risk-badge,
 .reviewed-status,
-.pending-status {
+.pending-status,
+.source-mode-badge {
   display: inline-flex;
   align-items: center;
   min-height: 25px;
@@ -1029,6 +1030,16 @@ svg {
 .risk-none {
   color: #566168;
   background: #e9edef;
+}
+
+.source-mode-lab {
+  color: #1a4a7a;
+  background: #dbeafe;
+}
+
+.source-mode-real {
+  color: #7c2d12;
+  background: #ffedd5;
 }
 
 .table-state {

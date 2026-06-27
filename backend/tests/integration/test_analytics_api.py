@@ -536,3 +536,56 @@ def test_csv_exports_content_encoding_and_metadata(
     assert all(row[2] == 1 for row in rows)
     assert all(row[3] == "utf-8-sig" for row in rows)
     assert any(row[4].get("country") == "argentina" for row in rows)
+
+
+def test_source_mode_field_in_session_response(
+    analytics_session: dict[str, object],
+) -> None:
+    with TestClient(app) as client:
+        login(client)
+        response = client.get("/api/v1/sessions?src_ip=203.0.113.18")
+        assert response.status_code == 200
+        items = response.json()["items"]
+        assert len(items) >= 1
+        target = next(
+            item
+            for item in items
+            if item["session_key"] == analytics_session["session_key"]
+        )
+        assert target["source_mode"] == "lab"
+
+
+def test_source_mode_filter_lab_returns_matching_sessions(
+    analytics_session: dict[str, object],
+) -> None:
+    with TestClient(app) as client:
+        login(client)
+        response = client.get(
+            "/api/v1/sessions?source_mode=lab&src_ip=203.0.113.18"
+        )
+        assert response.status_code == 200
+        items = response.json()["items"]
+        assert any(
+            item["session_key"] == analytics_session["session_key"]
+            for item in items
+        )
+        assert all(item["source_mode"] == "lab" for item in items)
+
+
+def test_source_mode_filter_real_returns_empty(
+    analytics_session: dict[str, object],
+) -> None:
+    with TestClient(app) as client:
+        login(client)
+        response = client.get(
+            "/api/v1/sessions?source_mode=real&src_ip=203.0.113.18"
+        )
+        assert response.status_code == 200
+        assert response.json()["pagination"]["total"] == 0
+
+
+def test_source_mode_invalid_value_returns_422() -> None:
+    with TestClient(app) as client:
+        login(client)
+        response = client.get("/api/v1/sessions?source_mode=staging")
+        assert response.status_code == 422
