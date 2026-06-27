@@ -1,5 +1,5 @@
 param(
-    [string]$Host,
+    [string]$VpsHost,
     [string]$User,
     [int]$SshPort,
     [string]$RemoteLogPath,
@@ -67,7 +67,7 @@ function Invoke-Native {
     }
 }
 
-$Host = Resolve-Setting -Value $Host -EnvName "VPS_HOST"
+$VpsHost = Resolve-Setting -Value $VpsHost -EnvName "VPS_HOST"
 $User = Resolve-Setting -Value $User -EnvName "VPS_USER" -DefaultValue "root"
 $SshPortValue = if ($PSBoundParameters.ContainsKey("SshPort")) {
     [string]$SshPort
@@ -76,8 +76,8 @@ $SshPortValue = if ($PSBoundParameters.ContainsKey("SshPort")) {
 }
 $RemoteLogPath = Resolve-Setting -Value $RemoteLogPath -EnvName "VPS_COWRIE_LOG_PATH" -DefaultValue "/opt/oscorp-cowrie/logs/cowrie.json"
 
-if ([string]::IsNullOrWhiteSpace($Host)) {
-    throw "Defina VPS_HOST en .env o pase -Host."
+if ([string]::IsNullOrWhiteSpace($VpsHost)) {
+    throw "Defina VPS_HOST en .env o pase -VpsHost."
 }
 if ([string]::IsNullOrWhiteSpace($User)) {
     throw "Defina VPS_USER en .env o pase -User."
@@ -101,7 +101,7 @@ if (-not (Test-Path -LiteralPath $localDirectory)) {
 }
 
 $temporaryLog = Join-Path ([System.IO.Path]::GetTempPath()) "oscorp_cowrie_vps.json"
-$remoteSpec = "{0}@{1}:{2}" -f $User, $Host, $RemoteLogPath
+$remoteSpec = "{0}@{1}:{2}" -f $User, $VpsHost, $RemoteLogPath
 
 Write-Host "[vps-sync] Copiando $remoteSpec -> $LocalLogPath"
 Write-Host "[vps-sync] Si usa password SSH, scp la pedira interactivamente."
