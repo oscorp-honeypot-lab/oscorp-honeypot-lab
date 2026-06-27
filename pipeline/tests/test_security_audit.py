@@ -17,7 +17,6 @@ import re
 import unittest
 from pathlib import Path
 
-
 _SKIP_IN_CONTAINER = (
     "docker-compose.yml not found — running inside Docker container "
     "or outside the project tree. Security audit tests require host/CI context."

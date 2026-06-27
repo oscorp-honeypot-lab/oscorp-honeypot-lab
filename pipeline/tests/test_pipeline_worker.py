@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 import unittest
 import uuid
+from pathlib import Path
 
 from pipeline_worker import validate_request
 
@@ -57,3 +59,19 @@ class ValidateRequestSourceModeTests(unittest.TestCase):
         self.assertIsNotNone(error)
         assert error is not None
         self.assertIn("extra_field", error)
+
+    def test_request_contract_declares_source_mode(self) -> None:
+        contract_path = (
+            Path(__file__).resolve().parents[1]
+            / "contracts"
+            / "run-request.schema.json"
+        )
+        schema = json.loads(contract_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            schema["properties"]["source_mode"]["enum"],
+            ["lab", "real"],
+        )
+        self.assertEqual(
+            schema["properties"]["source_mode"]["default"],
+            "lab",
+        )

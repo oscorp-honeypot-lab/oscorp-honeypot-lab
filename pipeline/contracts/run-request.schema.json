@@ -34,6 +34,13 @@
     "source": {
       "const": "cowrie_ndjson",
       "default": "cowrie_ndjson"
+    },
+    "source_mode": {
+      "enum": [
+        "lab",
+        "real"
+      ],
+      "default": "lab"
     }
   }
 }
