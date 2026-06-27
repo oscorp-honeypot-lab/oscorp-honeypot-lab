@@ -227,7 +227,19 @@ def normalize_timestamp(value: Any) -> datetime | None:
         return None
 
 
+def strip_null_bytes(obj: Any) -> Any:
+    """Remove \\u0000 from all string values — PostgreSQL rejects null bytes in text/jsonb."""
+    if isinstance(obj, str):
+        return obj.replace("\x00", "")
+    if isinstance(obj, dict):
+        return {k: strip_null_bytes(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [strip_null_bytes(v) for v in obj]
+    return obj
+
+
 def normalize_event(raw_line: str, event: dict[str, Any]) -> dict[str, Any]:
+    event = strip_null_bytes(event)
     src_port = event.get("src_port")
     try:
         src_port = int(src_port) if src_port is not None else None

@@ -61,7 +61,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const requestId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {\n  const random = Math.floor(Math.random() * 16);\n  const value = char === 'x' ? random : (random & 0x3) | 0x8;\n  return value.toString(16);\n});\nreturn [{\n  json: {\n    contract_version: '1.0',\n    request_id: requestId,\n    triggered_by: 'n8n_manual',\n    mode: 'incremental',\n    source: 'cowrie_ndjson'\n  }\n}];"
+        "jsCode": "const requestId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {\n  const random = Math.floor(Math.random() * 16);\n  const value = char === 'x' ? random : (random & 0x3) | 0x8;\n  return value.toString(16);\n});\nconst sourceMode = process.env.N8N_SOURCE_MODE || 'lab';\nreturn [{\n  json: {\n    contract_version: '1.0',\n    request_id: requestId,\n    triggered_by: 'n8n_manual',\n    mode: 'incremental',\n    source: 'cowrie_ndjson',\n    source_mode: sourceMode\n  }\n}];"
       },
       "id": "60457f6f-561d-4d35-bcdf-c8bf81e1ea7f",
       "name": "Build Run Request",
@@ -74,7 +74,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const requestId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {\n  const random = Math.floor(Math.random() * 16);\n  const value = char === 'x' ? random : (random & 0x3) | 0x8;\n  return value.toString(16);\n});\nreturn [{\n  json: {\n    contract_version: '1.0',\n    request_id: requestId,\n    triggered_by: 'n8n_schedule',\n    mode: 'incremental',\n    source: 'cowrie_ndjson'\n  }\n}];"
+        "jsCode": "const requestId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {\n  const random = Math.floor(Math.random() * 16);\n  const value = char === 'x' ? random : (random & 0x3) | 0x8;\n  return value.toString(16);\n});\nconst sourceMode = process.env.N8N_SOURCE_MODE || 'lab';\nreturn [{\n  json: {\n    contract_version: '1.0',\n    request_id: requestId,\n    triggered_by: 'n8n_schedule',\n    mode: 'incremental',\n    source: 'cowrie_ndjson',\n    source_mode: sourceMode\n  }\n}];"
       },
       "id": "a91a9959-d751-4b80-82bd-21d71fbe0885",
       "name": "Build Scheduled Run Request",

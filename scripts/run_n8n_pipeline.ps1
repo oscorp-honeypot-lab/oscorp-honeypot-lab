@@ -22,7 +22,7 @@ try {
     $previousErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        $executionOutput = & docker compose --profile $Profile run --rm --no-deps n8n execute --id=oscorp-cowrie-ndjson-pipeline --rawOutput
+        $executionOutput = & docker compose --profile $Profile run --rm --no-deps --env "N8N_SOURCE_MODE=$Profile" n8n execute --id=oscorp-cowrie-ndjson-pipeline --rawOutput
         $exitCode = $LASTEXITCODE
     }
     finally {
