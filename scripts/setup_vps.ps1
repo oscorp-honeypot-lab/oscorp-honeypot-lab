@@ -167,10 +167,15 @@ if ! `$SUDO docker compose version >/dev/null 2>&1; then
 fi
 
 echo "[vps] Creando directorios en `$REMOTE_DIR..."
-`$SUDO mkdir -p "`$REMOTE_DIR/logs" "`$REMOTE_DIR/etc"
-`$SUDO chown -R 1000:1000 "`$REMOTE_DIR/logs"
-`$SUDO chmod 0775 "`$REMOTE_DIR/logs"
+`$SUDO mkdir -p "`$REMOTE_DIR/var/log/cowrie" "`$REMOTE_DIR/var/lib/cowrie" "`$REMOTE_DIR/etc"
+`$SUDO chown -R 1000:1000 "`$REMOTE_DIR/var"
+`$SUDO chmod 0775 "`$REMOTE_DIR/var/log/cowrie"
+`$SUDO chmod 0755 "`$REMOTE_DIR/var/lib/cowrie"
 `$SUDO chmod 0755 "`$REMOTE_DIR/etc"
+if [ ! -L "`$REMOTE_DIR/logs" ]; then
+  `$SUDO rm -rf "`$REMOTE_DIR/logs"
+  `$SUDO ln -sfn "var/log/cowrie" "`$REMOTE_DIR/logs"
+fi
 
 echo "[vps] Escribiendo cowrie.cfg con output JSON habilitado..."
 `$SUDO tee "`$REMOTE_DIR/etc/cowrie.cfg" >/dev/null <<'COWRIE_CFG'
@@ -189,7 +194,7 @@ services:
     ports:
       - "`${COWRIE_PUBLIC_PORT:-2222}:2222"
     volumes:
-      - ./logs:/cowrie/cowrie-git/var/log/cowrie
+      - ./var:/cowrie/cowrie-git/var
       - ./etc/cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg:ro
     security_opt:
       - no-new-privileges:true
@@ -233,10 +238,10 @@ if [ "`$running" != "true" ]; then
   exit 1
 fi
 
-`$SUDO touch "`$REMOTE_DIR/logs/cowrie.json"
-`$SUDO chown 1000:1000 "`$REMOTE_DIR/logs/cowrie.json"
+`$SUDO touch "`$REMOTE_DIR/var/log/cowrie/cowrie.json"
+`$SUDO chown 1000:1000 "`$REMOTE_DIR/var/log/cowrie/cowrie.json"
 
-echo "[vps] OK. Cowrie escucha en el puerto `$COWRIE_PORT y escribe en `$REMOTE_DIR/logs/cowrie.json"
+echo "[vps] OK. Cowrie escucha en el puerto `$COWRIE_PORT y escribe en `$REMOTE_DIR/var/log/cowrie/cowrie.json (symlink: `$REMOTE_DIR/logs/cowrie.json)"
 "@
 
 $temporaryScript = Join-Path ([System.IO.Path]::GetTempPath()) "oscorp_setup_vps.sh"
