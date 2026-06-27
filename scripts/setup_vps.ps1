@@ -215,7 +215,8 @@ echo "[vps] OK. Cowrie escucha en el puerto `$COWRIE_PORT y escribe en `$REMOTE_
 "@
 
 $temporaryScript = Join-Path ([System.IO.Path]::GetTempPath()) "oscorp_setup_vps.sh"
-[System.IO.File]::WriteAllText($temporaryScript, $remoteScript, [System.Text.UTF8Encoding]::new($false))
+$remoteScriptLf = $remoteScript -replace "`r`n", "`n"
+[System.IO.File]::WriteAllText($temporaryScript, $remoteScriptLf, [System.Text.UTF8Encoding]::new($false))
 
 $sshTarget = "$User@$VpsHost"
 $remoteTmp = "/tmp/oscorp_setup_vps.sh"
