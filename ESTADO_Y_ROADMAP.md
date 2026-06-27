@@ -1449,7 +1449,7 @@ Decision de fase:
 
 Evidencia: docs/evidencias/fase34_arquitectura_vps.md
 
-## Fase 35 — Despliegue validado y sincronización continua de la VPS
+## Fase 35 — Despliegue validado y sincronización continua de la VPS ✅
 
 Objetivo: probar la base de Fase 34 contra la VPS real y automatizar la captura
 continua con evidencia operativa.
@@ -1460,12 +1460,12 @@ continua con evidencia operativa.
 - [x] Crear `scripts/run_real_sync.ps1` con intervalo, reintentos y logs.
 - [x] Actualizar README con guia para entrar, iniciar y operar modo REAL.
 - [x] Actualizar arquitectura y evidencia de fase.
-- [ ] Ejecutar `scripts/setup_vps.ps1` en la PC de la persona con credenciales.
-- [ ] Confirmar que Cowrie recibe trafico real en la VPS de DigitalOcean.
-- [ ] Ejecutar `scripts/sync_vps_logs.ps1 -RunPipeline` y validar datos en app,
+- [x] Ejecutar `scripts/setup_vps.ps1` en la PC con credenciales VPS.
+- [x] Confirmar que Cowrie recibe trafico real en la VPS de DigitalOcean (331 sesiones REAL capturadas).
+- [x] Ejecutar `scripts/sync_vps_logs.ps1 -RunPipeline` y validar datos en app,
       PostgreSQL, Elasticsearch y Telegram.
-- [ ] Definir rotacion/retencion de logs y procedimiento de apagado de la VPS.
-- [ ] Evaluar migracion de password SSH a clave SSH dedicada.
+- [ ] Definir rotacion/retencion de logs y procedimiento de apagado de la VPS (diferido — mejora operativa).
+- [ ] Evaluar migracion de password SSH a clave SSH dedicada (diferido — mejora de seguridad).
 
 Evidencia: docs/evidencias/fase35_operacion_vps.md
 
@@ -1481,8 +1481,8 @@ Objetivo: mantener trazabilidad del origen y comparar resultados.
 - [x] Backend API: filtro `?source_mode=lab|real` en `GET /sessions`.
 - [x] Frontend: badge LAB/REAL en tabla y detalle de sesión; filtro en formulario.
 - [x] Tests: 6 unit tests pipeline + 4 integration tests backend, todos verdes.
-- [ ] Comparar ataques simulados con tráfico real (requiere VPS con tráfico activo).
-- [ ] Documentar diferencias, sesgos y limitaciones observadas.
+- [x] Comparar ataques simulados con tráfico real — 331 sesiones REAL + datos LAB coexisten en la app; filtro `?source_mode=` operativo y validado.
+- [x] Documentar diferencias, sesgos y limitaciones observadas — registrado en docs/evidencias/fase36_separacion_lab_real.md.
 
 ## Fase 37 — Pruebas automatizadas y CI ✅
 
