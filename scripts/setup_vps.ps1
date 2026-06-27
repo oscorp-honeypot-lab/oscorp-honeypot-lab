@@ -167,9 +167,17 @@ if ! `$SUDO docker compose version >/dev/null 2>&1; then
 fi
 
 echo "[vps] Creando directorios en `$REMOTE_DIR..."
-`$SUDO mkdir -p "`$REMOTE_DIR/logs"
+`$SUDO mkdir -p "`$REMOTE_DIR/logs" "`$REMOTE_DIR/etc"
 `$SUDO chown -R 1000:1000 "`$REMOTE_DIR/logs"
 `$SUDO chmod 0775 "`$REMOTE_DIR/logs"
+`$SUDO chmod 0755 "`$REMOTE_DIR/etc"
+
+echo "[vps] Escribiendo cowrie.cfg con output JSON habilitado..."
+`$SUDO tee "`$REMOTE_DIR/etc/cowrie.cfg" >/dev/null <<'COWRIE_CFG'
+[output_jsonlog]
+enabled = true
+logfile = cowrie.json
+COWRIE_CFG
 
 echo "[vps] Escribiendo docker-compose.yml de Cowrie..."
 `$SUDO tee "`$REMOTE_DIR/docker-compose.yml" >/dev/null <<'YAML'
@@ -182,6 +190,7 @@ services:
       - "`${COWRIE_PUBLIC_PORT:-2222}:2222"
     volumes:
       - ./logs:/cowrie/cowrie-git/var/log/cowrie
+      - ./etc/cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg:ro
     security_opt:
       - no-new-privileges:true
     cap_drop:
