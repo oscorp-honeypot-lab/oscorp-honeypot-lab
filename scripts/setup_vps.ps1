@@ -127,8 +127,8 @@ if (-not $AssumeYes) {
 $remoteDirLiteral = ConvertTo-BashSingleQuote -Value $RemoteDir
 $skipFirewallValue = if ($SkipFirewall) { "1" } else { "0" }
 $remoteScript = @"
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+set -eu
 
 REMOTE_DIR=$remoteDirLiteral
 COWRIE_PORT=$CowriePort
