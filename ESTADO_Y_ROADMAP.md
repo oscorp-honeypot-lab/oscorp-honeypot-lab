@@ -182,7 +182,7 @@ Automatización
 ## Fecha de revisión
 
 ```text
-25 de junio de 2026
+27 de junio de 2026
 ```
 
 ## Estado resumido
@@ -205,16 +205,18 @@ Attack Risk Score:                          Implementado, persistido y validado 
 Modelo de alertas (criterios + tabla):       Implementado en Fase 23
 Entrega de alertas Telegram:                Implementada en Fase 24 (configurable via env vars)
 MTTD real:                                  Parcial — sent_at y mttd_seconds en alerts; API en Fase 25
-VirusTotal e ip-api:                        No implementados en la reestructuración
-Reportes automáticos:                       No implementados
-Modo REAL/VPS:                              Base Fase 35 implementada; VPS real pendiente de validar
-Pruebas automatizadas/CI:                   Pruebas backend y pipeline integradas; CI pendiente
+VirusTotal e ip-api:                        Implementados en Fases 27-28 con caché y enriquecimiento
+Reportes automáticos:                       Implementados en Fases 30-31 (HTML, CSV, Telegram)
+Modo REAL/VPS:                              Implementado Fase 35-36; VPS real validada con 331 sesiones REAL
+Pruebas automatizadas/CI:                   CI GitHub Actions operativo (6 jobs); 144 pipeline, 76 backend, 23 frontend
+Auditoría de seguridad:                     13 tests automatizados — Fase 38
+Versión etiquetada:                         v1.0.0 — primera entrega completa
 Actualización final de la tesis:            Pendiente hasta finalizar el sistema
 ```
 
 ## Última evidencia operativa disponible
 
-Última validación: **26 de junio de 2026**.
+Última validación: **27 de junio de 2026**.
 
 La validación operativa más reciente confirmó:
 
@@ -1491,14 +1493,29 @@ Objetivo: establecer controles continuos de calidad.
 - [x] Crear pipeline CI sin secretos reales (`.github/workflows/ci.yml`, 6 jobs).
 - [x] Definir una línea base de cobertura y fallos bloqueantes (60 %, `--cov-fail-under=60`).
 
-## Fase 38 — Reproducibilidad y revisión de seguridad final
+## Fase 38 — Reproducibilidad y revisión de seguridad final ✅
 
 Objetivo: validar una entrega instalable y defendible.
 
-- [ ] Validar instalación desde otra máquina limpia.
-- [ ] Probar backup y restauración completos.
-- [ ] Revisar dependencias, secretos, privacidad y retención de datos.
-- [ ] Crear una versión etiquetada del sistema.
+```text
+[x] Validar instalación desde otra máquina limpia.
+    validate_reproducibility.ps1 — auditoría integral de reproducibilidad y seguridad.
+
+[x] Probar backup y restauración completos.
+    backup.ps1 actualizado con --clean --if-exists.
+    restore.ps1 creado — restaura PostgreSQL, re-indexa Elasticsearch.
+    Ciclo backup→restore validado: 1879 eventos, 331 sesiones, 51 runs restaurados sin pérdida.
+
+[x] Revisar dependencias, secretos, privacidad y retención de datos.
+    test_security_audit.py — 13 tests automatizados de auditoría.
+    Resultado: 13/13 OK. Ver docs/evidencias/fase38_reproducibilidad_seguridad.md.
+    Riesgos conocidos documentados y aceptados.
+
+[x] Crear una versión etiquetada del sistema.
+    git tag v1.0.0 — primera entrega completa del sistema.
+```
+
+Evidencia: docs/evidencias/fase38_reproducibilidad_seguridad.md
 
 ## Fase 39 — Documentación, defensa y actualización de tesis
 

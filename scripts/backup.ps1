@@ -7,7 +7,7 @@ $destination = Join-Path $ProjectRoot "backups\$timestamp"
 New-Item -ItemType Directory -Path $destination -Force | Out-Null
 
 Write-Host "[backup] Exportando PostgreSQL..."
-$postgresDump = & docker compose exec -T postgres pg_dump -U oscorp -d oscorp
+$postgresDump = & docker compose exec -T postgres pg_dump -U oscorp -d oscorp --clean --if-exists
 if ($LASTEXITCODE -ne 0) {
     throw "Falló el backup de PostgreSQL."
 }
