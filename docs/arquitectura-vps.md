@@ -1,5 +1,7 @@
 # Arquitectura REAL / VPS
 
+Para la vista consolidada LAB/REAL, ver `docs/arquitectura-final.md`.
+
 El modo REAL permite capturar trafico SSH real desde una VPS publica sin volver
 obligatoria la VPS para probar el proyecto. El LAB local sigue siendo la ruta
 principal y reproducible; la VPS funciona como sensor externo opcional.
@@ -145,6 +147,52 @@ La fase 34 deja una base prudente, no un hardening final:
 - La VPS debe considerarse host expuesto: revisar costos, logs y seguridad antes
   de dejarla activa mucho tiempo.
 
+## Retencion de logs y apagado
+
+El log remoto principal es:
+
+```text
+/opt/oscorp-cowrie/logs/cowrie.json
+```
+
+Politica operativa definida:
+
+- sincronizar y procesar antes de cualquier rotacion o apagado:
+  `.\scripts\sync_vps_logs.ps1 -RunPipeline`;
+- retener logs crudos en la VPS por 7 dias;
+- conservar evidencia durable en la PC local mediante PostgreSQL,
+  Elasticsearch, reportes o `scripts/backup.ps1`;
+- no versionar logs ni backups.
+
+Apagado recomendado:
+
+```powershell
+.\scripts\sync_vps_logs.ps1 -RunPipeline
+```
+
+Despues, en la VPS y dentro de `VPS_REMOTE_DIR`:
+
+```bash
+docker compose down
+```
+
+Si no se va a seguir capturando trafico real, apagar o destruir la VPS desde el
+panel del proveedor para evitar costos.
+
+## Evaluacion de clave SSH dedicada
+
+Para operacion sostenida se recomienda reemplazar password SSH por una clave
+Ed25519 dedicada con passphrase. La migracion no se automatiza en este repo
+porque requiere credenciales reales y puede bloquear el acceso si se aplica mal.
+
+Reglas de seguridad:
+
+- generar la clave fuera del repo;
+- instalar solo la clave publica en la VPS;
+- verificar acceso por clave antes de deshabilitar password;
+- no versionar claves privadas, passwords ni variables `VPS_PASSWORD`;
+- mantener `ssh` y `scp` como herramientas externas de autenticacion.
+
 ## Validacion local
 
 Sin conectarse a ninguna VPS:
@@ -161,9 +209,9 @@ Esta validacion comprueba:
 - ausencia de `cowrie`, `attacker-sim` y `payload-server` en el perfil `real`;
 - ausencia de variables de password de VPS en `.env.example`.
 
-## Pendiente para fase 35
+## Cierre de fase 35
 
-- Ejecutar `setup_vps.ps1` contra la VPS real de DigitalOcean.
-- Probar exposicion publica de Cowrie con eventos reales controlados.
-- Definir rotacion/retencion de logs en VPS.
-- Evaluar si conviene migrar de password SSH a clave SSH.
+- VPS real validada con trafico capturado.
+- Sincronizacion REAL documentada y probada.
+- Retencion/apagado definidos.
+- Migracion a clave SSH evaluada y recomendada para operacion sostenida.

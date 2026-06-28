@@ -21,9 +21,11 @@ Sirve para probar de forma reproducible:
 - visualizacion en la app web propia;
 - dashboards de Kibana como apoyo tecnico opcional.
 
-El modo `lab` levanta todo localmente con Docker. El modo `real`, que se
-implementara en la siguiente etapa, queda orientado a procesar logs de una VPS
-externa sin depender de Cowrie local.
+El modo `lab` levanta todo localmente con Docker. El modo `real` procesa logs de
+una VPS externa sin depender de Cowrie local.
+
+La arquitectura final consolidada esta documentada en
+`docs/arquitectura-final.md`.
 
 ## Clonar el proyecto
 
@@ -531,6 +533,36 @@ Sin ejecutar pipeline, solo traer el archivo:
 
 Esta validacion revisa scripts, perfil `real` de Docker Compose y ausencia de
 passwords de VPS en `.env.example`.
+
+### 7. Retencion, apagado y acceso SSH
+
+Antes de rotar logs o apagar la VPS:
+
+```powershell
+.\scripts\sync_vps_logs.ps1 -RunPipeline
+```
+
+Politica definida:
+
+- retener logs crudos en la VPS por 7 dias;
+- conservar evidencia durable en PostgreSQL, Elasticsearch, reportes o backups
+  locales;
+- no versionar logs, backups, passwords ni claves privadas.
+
+Para detener Cowrie en la VPS, entrar al directorio remoto configurado en
+`VPS_REMOTE_DIR` y ejecutar:
+
+```bash
+docker compose down
+```
+
+Si no se va a seguir capturando trafico real, apagar o destruir la VPS desde el
+panel del proveedor para evitar costos.
+
+Para operacion sostenida se recomienda migrar de password SSH a una clave
+Ed25519 dedicada con passphrase. La clave se genera fuera del repo, se instala
+solo la publica en la VPS y se prueba en una segunda terminal antes de
+deshabilitar password.
 
 ### Flujo REAL resumido
 
