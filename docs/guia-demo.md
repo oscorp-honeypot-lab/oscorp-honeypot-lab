@@ -1,5 +1,8 @@
 # Guia demo - OSCORP Honeypot Lab
 
+Para entender donde encaja esta demo dentro del sistema completo, ver
+`docs/arquitectura-final.md`.
+
 ## 1. Levantar el laboratorio
 
 ```powershell
@@ -64,6 +67,7 @@ Invoke-RestMethod -Uri http://localhost:9200/cowrie-events/_count
 
 ```text
 n8n:    http://localhost:5678
+App:    http://localhost:5173/dashboard
 Kibana: http://localhost:5601
 ```
 

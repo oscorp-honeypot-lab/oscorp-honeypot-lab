@@ -100,11 +100,44 @@ Validacion sin tocar la VPS:
 .\scripts\setup_real.ps1 -ValidateOnly
 ```
 
-## Pendiente con VPS real
+## Validacion con VPS real
 
-- Ejecutar `setup_vps.ps1` desde la PC con credenciales.
-- Confirmar que Cowrie recibe conexiones reales.
-- Ejecutar `sync_vps_logs.ps1 -RunPipeline`.
-- Verificar datos nuevos en dashboard, sesiones, PostgreSQL, Elasticsearch y
-  Telegram.
-- Definir rotacion y retencion de logs en la VPS.
+- `setup_vps.ps1` fue ejecutado desde la PC con credenciales.
+- Cowrie recibio conexiones reales en la VPS de DigitalOcean.
+- `sync_vps_logs.ps1 -RunPipeline` proceso datos con perfil `real`.
+- Se validaron datos REAL en app, PostgreSQL, Elasticsearch y Telegram.
+- La evidencia operativa registra 331 sesiones REAL capturadas.
+
+## Rotacion, retencion y apagado
+
+Politica definida para el sensor VPS:
+
+- El log remoto autoritativo es `/opt/oscorp-cowrie/logs/cowrie.json`.
+- Antes de rotar o apagar la VPS se debe ejecutar una ultima sincronizacion:
+  `.\scripts\sync_vps_logs.ps1 -RunPipeline`.
+- Retener logs crudos en la VPS por 7 dias como ventana operativa corta.
+- Conservar respaldos/exportaciones locales fuera de git; `backups/*` y
+  `cowrie/logs/*` permanecen ignorados.
+- Si se requiere una ventana mayor de investigacion, exportar primero desde
+  PostgreSQL/Elasticsearch o crear backup local con `scripts/backup.ps1`.
+
+Procedimiento de apagado recomendado:
+
+1. Ejecutar `.\scripts\sync_vps_logs.ps1 -RunPipeline`.
+2. Verificar sesiones REAL en la app con el filtro de modo.
+3. En la VPS, detener Cowrie desde `VPS_REMOTE_DIR` con
+   `docker compose down`.
+4. Guardar evidencia local necesaria y apagar o destruir la VPS desde el panel
+   del proveedor para evitar costos.
+
+## Evaluacion de SSH por clave
+
+Decision: migrar a una clave SSH dedicada es recomendado para uso sostenido,
+pero no se automatiza desde Codex para evitar bloqueo accidental de acceso.
+
+Criterio operativo:
+
+- Usar una clave Ed25519 dedicada y con passphrase, generada fuera del repo.
+- Versionar solo instrucciones; nunca claves privadas, passwords ni `VPS_PASSWORD`.
+- Probar login por clave en una segunda terminal antes de deshabilitar password.
+- Mantener `ssh`/`scp` como mecanismo de autenticacion externo al proyecto.

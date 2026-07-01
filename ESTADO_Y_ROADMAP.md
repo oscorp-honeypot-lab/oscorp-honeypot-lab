@@ -1464,8 +1464,8 @@ continua con evidencia operativa.
 - [x] Confirmar que Cowrie recibe trafico real en la VPS de DigitalOcean (331 sesiones REAL capturadas).
 - [x] Ejecutar `scripts/sync_vps_logs.ps1 -RunPipeline` y validar datos en app,
       PostgreSQL, Elasticsearch y Telegram.
-- [ ] Definir rotacion/retencion de logs y procedimiento de apagado de la VPS (diferido — mejora operativa).
-- [ ] Evaluar migracion de password SSH a clave SSH dedicada (diferido — mejora de seguridad).
+- [x] Definir rotacion/retencion de logs y procedimiento de apagado de la VPS.
+- [x] Evaluar migracion de password SSH a clave SSH dedicada.
 
 Evidencia: docs/evidencias/fase35_operacion_vps.md
 
@@ -1599,10 +1599,14 @@ Evidencia: docs/evidencias/bugfix_2026-07-01_sessions_table_layout_auto.md
 
 Objetivo: cerrar el proyecto académico después de finalizar el sistema.
 
-- [ ] Crear el diagrama final de arquitectura y actualizar las guías.
+- [x] Crear el diagrama final de arquitectura y actualizar las guías.
 - [ ] Crear video demo y consolidar evidencias y métricas.
-- [ ] Registrar diferencias entre el sistema original y OSCORP ThreatLab.
+- [x] Registrar diferencias entre el sistema original y OSCORP ThreatLab.
 - [ ] Actualizar el PDF de la tesis con arquitectura, metodología y resultados definitivos.
+
+Evidencia:
+- docs/arquitectura-final.md
+- docs/evidencias/fase39_diferencias_y_mapa_tesis.md
 
 ---
 

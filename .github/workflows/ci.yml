@@ -143,6 +143,16 @@ jobs:
           DATABASE_URL: postgresql+psycopg://oscorp:oscorp_ci@localhost:5432/oscorp
       - name: Install backend deps
         run: pip install -r backend/requirements.txt
+      - name: Bootstrap admin user
+        run: python -m app.infrastructure.bootstrap
+        working-directory: backend
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
+          OSCORP_API_DATABASE_URL: postgresql+psycopg://oscorp:oscorp_ci@localhost:5432/oscorp
+          OSCORP_API_ADMIN_USERNAME: admin
+          OSCORP_API_ADMIN_PASSWORD: CiTestPassword2026!
+          OSCORP_API_ENVIRONMENT: lab
+          OSCORP_API_COOKIE_SECURE: "false"
       - name: Run integration tests with coverage
         run: |
           python -m pytest tests/integration -v --tb=short \

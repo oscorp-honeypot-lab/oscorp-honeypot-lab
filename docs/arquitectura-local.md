@@ -1,5 +1,7 @@
 # Arquitectura local LAB
 
+Para la vista consolidada LAB/REAL, ver `docs/arquitectura-final.md`.
+
 ```text
 attacker-sim -> cowrie -> cowrie/logs/cowrie.json
                          -> n8n
