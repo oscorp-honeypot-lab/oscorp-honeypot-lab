@@ -116,6 +116,103 @@ async def test_send_latest_telegram_skips_when_not_configured() -> None:
 
 
 @pytest.mark.asyncio
+async def test_html_report_groups_secondary_tables_in_grid() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    artifact = await service.download_latest(
+        actor=_actor(),
+        period_type="daily",
+        format="html",
+    )
+    html = artifact.content
+    assert html.count(b"grid-template-columns:repeat(3, 1fr)") == 1
+    assert html.find(b"Top Countries") < html.find(b"Top Credentials")
+    assert html.find(b"Top Credentials") < html.find(b"Top Commands")
+
+
+@pytest.mark.asyncio
+async def test_html_report_totals_cards_use_single_row_grid() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    artifact = await service.download_latest(
+        actor=_actor(),
+        period_type="daily",
+        format="html",
+    )
+    assert b"grid-template-columns:repeat(auto-fit, minmax(140px, 1fr))" in artifact.content
+
+
+@pytest.mark.asyncio
+async def test_html_report_tables_have_internal_scroll_limit() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    artifact = await service.download_latest(
+        actor=_actor(),
+        period_type="daily",
+        format="html",
+    )
+    html = artifact.content
+    assert b"max-height:280px" in html
+    assert b"overflow-y:auto" in html
+
+
+@pytest.mark.asyncio
+async def test_html_report_keeps_all_rows_when_over_scroll_limit() -> None:
+    report = _report()
+    report.dataset["top_source_ips"] = [
+        {"src_ip": f"203.0.113.{i}", "event_count": i} for i in range(10)
+    ]
+
+    class _RepoManyRows(_Repo):
+        async def get_latest_report(self, *, period_type: str):
+            return report if period_type == "daily" else None
+
+    repo = _RepoManyRows()
+    service = ReportService(repo)
+    artifact = await service.download_latest(
+        actor=_actor(),
+        period_type="daily",
+        format="html",
+    )
+    html = artifact.content
+    for i in range(10):
+        assert f"203.0.113.{i}".encode() in html
+    assert b"max-height:280px" in html
+
+
+@pytest.mark.asyncio
+async def test_html_report_side_by_side_tables_use_fixed_layout_to_avoid_overflow() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    artifact = await service.download_latest(
+        actor=_actor(),
+        period_type="daily",
+        format="html",
+    )
+    html = artifact.content
+    # Top Countries / Top Credentials / Top Commands share a narrow 3-column
+    # row, so they need a fixed layout + wrapping to avoid spilling past
+    # their column instead of overflowing the page.
+    assert html.count(b"table-layout:fixed") == 2  # top_credentials + top_commands (top_countries is empty)
+    assert b"overflow-wrap:break-word" in html
+
+
+@pytest.mark.asyncio
+async def test_html_report_full_width_tables_keep_original_auto_layout() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    artifact = await service.download_latest(
+        actor=_actor(),
+        period_type="daily",
+        format="html",
+    )
+    html = artifact.content
+    # Full-width tables (Top Source Ips, Downloads, Mttd, ...) have plenty of
+    # room at 980px, so they keep their original nowrap/auto-layout look.
+    assert b"white-space:nowrap" in html
+
+
+@pytest.mark.asyncio
 async def test_send_latest_telegram_records_failure() -> None:
     repo = _Repo()
     telegram = _Telegram(ok=False, error="http_429: Too Many Requests")

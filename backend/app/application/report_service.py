@@ -61,19 +61,32 @@ _SECTION_H2 = (
 )
 
 
-def _section_rows(title: str, rows: list[dict[str, object]]) -> str:
+_TABLE_MAX_HEIGHT = "280px"
+
+
+def _table_block(
+    title: str,
+    rows: list[dict[str, object]],
+    *,
+    compact: bool = False,
+) -> str:
     label = escape(title)
     if not rows:
         return (
-            f'<section style="margin-bottom:28px;">'
             f'<h2 style="{_SECTION_H2}">{label}</h2>'
             f'<p style="color:#68747a;font-size:0.85rem;font-style:italic;">Sin datos disponibles.</p>'
-            f'</section>'
         )
+    table_layout = "table-layout:fixed;" if compact else ""
+    wrap_style = "overflow-wrap:break-word;" if compact else "white-space:nowrap;"
+    th_padding = "6px 8px" if compact else "9px 14px"
+    th_font_size = "0.62rem" if compact else "0.72rem"
+    td_padding = "6px 8px" if compact else "8px 14px"
+    td_font_size = "0.78rem" if compact else "0.86rem"
     headers = tuple(rows[0].keys())
     head_cells = "".join(
-        f'<th style="padding:9px 14px;text-align:left;font-size:0.72rem;text-transform:uppercase;'
-        f'letter-spacing:.07em;background:#202427;color:#7bd3db;font-weight:700;white-space:nowrap;">'
+        f'<th style="padding:{th_padding};text-align:left;font-size:{th_font_size};text-transform:uppercase;'
+        f'letter-spacing:.07em;background:#202427;color:#7bd3db;font-weight:700;'
+        f'{wrap_style}position:sticky;top:0;">'
         f'{escape(str(h).replace("_", " "))}</th>'
         for h in headers
     )
@@ -81,19 +94,40 @@ def _section_rows(title: str, rows: list[dict[str, object]]) -> str:
     for i, row in enumerate(rows):
         bg = "#f8fafb" if i % 2 == 0 else "#ffffff"
         cells = "".join(
-            f'<td style="padding:8px 14px;border-bottom:1px solid #dce1e4;'
-            f'color:#172026;font-size:0.86rem;">{escape(_fmt(row.get(h)))}</td>'
+            f'<td style="padding:{td_padding};border-bottom:1px solid #dce1e4;'
+            f'color:#172026;font-size:{td_font_size};{"overflow-wrap:break-word;" if compact else ""}">'
+            f'{escape(_fmt(row.get(h)))}</td>'
             for h in headers
         )
         body_rows += f'<tr style="background:{bg};">{cells}</tr>'
     return (
-        f'<section style="margin-bottom:32px;">'
         f'<h2 style="{_SECTION_H2}">{label}</h2>'
-        f'<div style="border:1px solid #dce1e4;border-radius:8px;overflow:hidden;">'
-        f'<table style="border-collapse:collapse;width:100%;">'
+        f'<div style="border:1px solid #dce1e4;border-radius:8px;'
+        f'max-height:{_TABLE_MAX_HEIGHT};overflow-y:auto;overflow-x:hidden;">'
+        f'<table style="border-collapse:collapse;width:100%;{table_layout}">'
         f'<thead><tr>{head_cells}</tr></thead>'
         f'<tbody>{body_rows}</tbody>'
-        f'</table></div></section>'
+        f'</table></div>'
+    )
+
+
+def _section_rows(title: str, rows: list[dict[str, object]]) -> str:
+    return f'<section style="margin-bottom:32px;">{_table_block(title, rows)}</section>'
+
+
+_SIDE_BY_SIDE_LABELS = ("top_countries", "top_credentials", "top_commands")
+
+
+def _secondary_tables_grid(rows: dict[str, list[dict[str, object]]]) -> str:
+    columns = "".join(
+        f'<div>{_table_block(label.replace("_", " ").title(), rows.get(label, []), compact=True)}</div>'
+        for label in _SIDE_BY_SIDE_LABELS
+    )
+    return (
+        '<section style="margin-bottom:32px;">'
+        '<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:20px;align-items:start;">'
+        f"{columns}"
+        "</div></section>"
     )
 
 
@@ -165,7 +199,8 @@ def _totals_cards(rows: list[dict[str, object]]) -> str:
     return (
         '<section style="margin-bottom:32px;">'
         f'<h2 style="{_SECTION_H2}">RESUMEN OPERATIVO</h2>'
-        f'<div style="display:flex;flex-wrap:wrap;gap:12px;">{"".join(cards)}</div>'
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));'
+        f'gap:12px;">{"".join(cards)}</div>'
         '</section>'
     )
 
@@ -180,11 +215,18 @@ def _html_report(report: ReportRun) -> bytes:
         f"→ {report.period_end.strftime('%Y-%m-%d %H:%M')} UTC"
     )
     totals_html = _totals_cards(rows.get("totals", []))
-    sections = "\n".join(
-        _section_rows(label.replace("_", " ").title(), value)
-        for label, value in rows.items()
-        if label != "totals"
-    )
+    section_blocks: list[str] = []
+    grid_rendered = False
+    for label, value in rows.items():
+        if label == "totals":
+            continue
+        if label in _SIDE_BY_SIDE_LABELS:
+            if not grid_rendered:
+                section_blocks.append(_secondary_tables_grid(rows))
+                grid_rendered = True
+            continue
+        section_blocks.append(_section_rows(label.replace("_", " ").title(), value))
+    sections = "\n".join(section_blocks)
     html = (
         "<!doctype html>\n"
         '<html lang="es">\n'

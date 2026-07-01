@@ -833,7 +833,7 @@ svg {
 
 .session-filters {
   display: grid;
-  grid-template-columns: repeat(5, minmax(120px, 1fr)) auto;
+  grid-template-columns: repeat(6, minmax(120px, 1fr)) auto;
   gap: 12px;
   align-items: end;
   margin-bottom: 16px;
@@ -895,19 +895,18 @@ svg {
 
 .table-frame table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1110px;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .table-frame th {
-  height: 44px;
-  padding: 0 12px;
+  padding: 6px 8px;
   border-bottom: 1px solid #cfd6da;
   color: #566168;
   background: #f7f8f9;
   text-align: left;
-  font-size: 0.72rem;
+  font-size: 12px;
   text-transform: uppercase;
 }
 
@@ -920,10 +919,13 @@ svg {
   width: 120px;
 }
 
-.table-frame th:nth-child(4),
+.table-frame th:nth-child(4) {
+  width: 84px;
+}
+
 .table-frame th:nth-child(5),
 .table-frame th:nth-child(6) {
-  width: 84px;
+  width: 112px;
 }
 
 .table-frame th:nth-child(7) {
@@ -934,9 +936,13 @@ svg {
   width: 100px;
 }
 
+.table-frame th:nth-child(9) {
+  width: 90px;
+}
+
 .table-frame th button {
   width: 100%;
-  height: 43px;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -953,14 +959,14 @@ svg {
 .table-frame th button svg {
   width: 14px;
   height: 14px;
+  flex-shrink: 0;
 }
 
 .table-frame td {
-  height: 64px;
-  padding: 10px 12px;
+  padding: 6px 8px;
   border-bottom: 1px solid #e7eaec;
   color: #343a40;
-  font-size: 0.8rem;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
 }

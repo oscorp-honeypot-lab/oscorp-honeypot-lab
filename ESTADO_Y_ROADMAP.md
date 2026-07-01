@@ -1517,6 +1517,84 @@ Objetivo: validar una entrega instalable y defendible.
 
 Evidencia: docs/evidencias/fase38_reproducibilidad_seguridad.md
 
+## Corrección post-v1.0.0 — Bugs visuales en Sesiones ✅
+
+Objetivo: corregir dos bugs reportados en `/sessions` tras la entrega v1.0.0.
+
+```text
+[x] Filtros (IP, País, Usuario, Riesgo, Revisión, Modo) sin efecto al hacer clic en "Aplicar".
+    Causa: grid-template-columns de .session-filters quedó desactualizado desde la
+    Fase 36 (agregó el campo "Modo" sin sumar una columna al grid), lo que empujaba
+    el botón "Aplicar" a una fila nueva, lejos de donde el usuario lo espera.
+    Fix: grid-template-columns: repeat(6, minmax(120px, 1fr)) auto.
+
+[x] Flechas de ordenamiento (↑↓) superpuestas en columnas COMANDOS y DESCARGAS.
+    Causa: ancho fijo de 84px compartido por Eventos/Comandos/Descargas, insuficiente
+    para el texto + ícono en las columnas más largas.
+    Fix: Comandos y Descargas a 112px; flex-shrink: 0 en el ícono de orden.
+```
+
+Evidencia: docs/evidencias/bugfix_2026-07-01_sessions_ui.md
+
+## Corrección post-v1.0.0 — Layout del reporte HTML ✅
+
+Objetivo: corregir el layout del reporte HTML generado por el motor de reportes
+(`backend/app/application/report_service.py`), demasiado largo verticalmente y sin límite de filas.
+
+```text
+[x] Tarjetas de resumen y tablas ocupaban todo el ancho en una sola columna.
+    Fix: tarjetas de resumen en grid de una fila (auto-fit); Top Countries, Top
+    Credentials y Top Commands agrupadas lado a lado en un grid de 3 columnas.
+
+[x] Tablas sin límite de filas, reporte interminable.
+    Fix: cada tabla limitada a ~7 filas visibles con scroll interno
+    (max-height:280px + overflow-y:auto), header sticky. Los datos completos
+    siguen presentes en el HTML — el límite es visual, no de datos.
+
+[x] Bug encontrado en verificación visual: Top Commands se cortaba fuera de la
+    página al quedar en una columna de ~300px con white-space:nowrap heredado.
+    Fix: table-layout:fixed + overflow-wrap:break-word solo en las tablas
+    compactas de la grilla; las tablas de ancho completo no cambiaron.
+```
+
+Evidencia: docs/evidencias/bugfix_2026-07-01_reporte_html_layout.md
+
+## Corrección post-v1.0.0 — Columna "Revisión" cortada en Sesiones ✅
+
+Objetivo: corregir la última columna ("Revisión") de la tabla en `/sessions`, que se
+mostraba cortada como "REVISIÓ" porque las 9 columnas no entraban en el ancho declarado.
+
+```text
+[x] Columna Revisión sin ancho propio, colapsaba a 0px con table-layout:fixed.
+    Causa: la corrección anterior (Comandos/Descargas 84px→112px) subió la suma de las 8
+    columnas con ancho fijo a 1020px, superando el min-width:980px de la tabla, sin dejar
+    espacio para la 9na columna.
+    Fix: width:90px explícito para Revisión; padding de th/td reducido (12px→8px) para
+    ganar espacio sin abreviar los títulos; min-width recalculado a 1110px (suma real).
+    Scroll horizontal existente (.table-scroll) queda como resguardo en ventanas angostas.
+```
+
+Evidencia: docs/evidencias/bugfix_2026-07-01_sessions_revision_column.md
+
+## Corrección post-v1.0.0 — Tabla de Sesiones: table-layout:auto ✅
+
+Objetivo: el usuario reportó que a 1920px seguía viendo scroll horizontal y "Revisión"
+cortada pese a la corrección anterior. Verificado con Chrome headless: a 1920px CSS reales
+no había scroll ni corte — la causa probable es *display scaling* de Windows (125%/150%),
+muy común en monitores de esa resolución, que reduce el viewport CSS efectivo. De todas
+formas se implementó el enfoque pedido explícitamente por el usuario.
+
+```text
+[x] table-layout: fixed → table-layout: auto (los anchos por columna quedan como hints,
+    no como valor rígido — ninguna columna puede volver a colapsar a 0).
+[x] font-size de toda la tabla → 12px (antes 0.72rem header / 0.8rem celdas).
+[x] padding de celdas → 6px top/bottom, 8px left/right (antes 0/10px vertical, 8px horizontal).
+[x] Verificado sin scroll horizontal a 1920px y 1536px (≈1920 con 125% de escalado);
+    a 1280px (≈150% de escalado) cae al scroll horizontal existente, sin cortar texto.
+```
+
+Evidencia: docs/evidencias/bugfix_2026-07-01_sessions_table_layout_auto.md
+
 ## Fase 39 — Documentación, defensa y actualización de tesis
 
 Objetivo: cerrar el proyecto académico después de finalizar el sistema.
