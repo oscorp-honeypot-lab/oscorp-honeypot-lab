@@ -70,6 +70,7 @@ async def lifespan(app: FastAPI):
             bot_token=settings.telegram_bot_token,
             chat_id=settings.telegram_chat_id,
         ),
+        rules_version="1.1.0",
     )
     app.state.lab_service = LabService(
         analytics_repository,

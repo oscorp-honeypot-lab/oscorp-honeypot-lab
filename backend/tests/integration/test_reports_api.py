@@ -120,6 +120,76 @@ def test_latest_report_downloads_html_and_csv() -> None:
             assert cursor.fetchone()[0] == 2
 
 
+def test_latest_report_24h_computes_live_rolling_window() -> None:
+    with TestClient(app) as client:
+        login(client)
+        response = client.get("/api/v1/reports/latest/24h")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["period_type"] == "24h"
+        start = datetime.fromisoformat(body["period_start"])
+        end = datetime.fromisoformat(body["period_end"])
+        assert (end - start).total_seconds() == pytest.approx(86400, abs=5)
+
+
+def test_download_latest_report_24h_does_not_persist_delivery() -> None:
+    with TestClient(app) as client:
+        login(client)
+        response = client.get("/api/v1/reports/latest/24h/download?format=html")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/html")
+        assert "OSCORP ThreatLab" in response.text
+
+    with psycopg.connect(database_dsn()) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT COUNT(*) FROM report_runs WHERE period_type = '24h'"
+            )
+            assert cursor.fetchone()[0] == 0
+
+
+def test_send_latest_report_24h_telegram_rejected() -> None:
+    with TestClient(app) as client:
+        login(client)
+        csrf = client.cookies.get("oscorp_csrf")
+        response = client.post(
+            "/api/v1/reports/latest/24h/telegram?format=html",
+            headers={"X-CSRF-Token": csrf or ""},
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "report_period_invalid"
+
+
+def test_download_custom_report_range() -> None:
+    with TestClient(app) as client:
+        login(client)
+        response = client.get(
+            "/api/v1/reports/custom/download",
+            params={
+                "start": "2026-01-01T00:00:00Z",
+                "end": "2026-01-02T00:00:00Z",
+                "format": "csv",
+            },
+        )
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/csv")
+        assert "custom" in response.headers["content-disposition"]
+
+
+def test_download_custom_report_rejects_start_after_end() -> None:
+    with TestClient(app) as client:
+        login(client)
+        response = client.get(
+            "/api/v1/reports/custom/download",
+            params={
+                "start": "2026-01-02T00:00:00Z",
+                "end": "2026-01-01T00:00:00Z",
+            },
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "report_period_invalid"
+
+
 def test_telegram_delivery_without_credentials_is_recorded_as_skipped() -> None:
     with TestClient(app) as client:
         login(client)

@@ -3,14 +3,23 @@ from __future__ import annotations
 import csv
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from html import escape
 from io import StringIO
 from typing import Any, Protocol
+from uuid import uuid4
 
 from app.domain.analytics import ReportArtifact, ReportDelivery, ReportRun
 from app.domain.identity import UserIdentity
 from app.domain.ports.analytics_repository import AnalyticsRepository
+
+ROLLING_WINDOW_HOURS = 24
+MAX_CUSTOM_RANGE_DAYS = 90
+_ADHOC_PERIOD_TYPES = frozenset({"24h", "custom"})
+
+
+def _is_adhoc(period_type: str) -> bool:
+    return period_type in _ADHOC_PERIOD_TYPES
 
 
 class ReportNotFound(Exception):
@@ -22,6 +31,10 @@ class ReportFormatUnsupported(Exception):
 
 
 class ReportDeliveryFailed(Exception):
+    pass
+
+
+class ReportPeriodInvalid(Exception):
     pass
 
 
@@ -352,15 +365,73 @@ class ReportService:
         self,
         repository: AnalyticsRepository,
         telegram_sender: TelegramSender | None = None,
+        rules_version: str = "1.1.0",
     ) -> None:
         self._repository = repository
         self._telegram_sender = telegram_sender
+        self._rules_version = rules_version
 
     async def latest(self, *, period_type: str) -> ReportRun:
+        if period_type == "24h":
+            return await self._build_rolling_24h()
         report = await self._repository.get_latest_report(period_type=period_type)
         if report is None:
             raise ReportNotFound(period_type)
         return report
+
+    async def _build_rolling_24h(self) -> ReportRun:
+        end = datetime.now(timezone.utc)
+        start = end - timedelta(hours=ROLLING_WINDOW_HOURS)
+        dataset = await self._repository.build_report_dataset(
+            start=start,
+            end=end,
+            rules_version=self._rules_version,
+        )
+        return ReportRun(
+            id=uuid4(),
+            period_type="24h",
+            period_start=start,
+            period_end=end,
+            status="completed",
+            dataset=dataset,
+        )
+
+    async def custom_range(self, *, start: datetime, end: datetime) -> ReportRun:
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
+        if start >= end:
+            raise ReportPeriodInvalid("start must be before end")
+        if end - start > timedelta(days=MAX_CUSTOM_RANGE_DAYS):
+            raise ReportPeriodInvalid(
+                f"range must not exceed {MAX_CUSTOM_RANGE_DAYS} days"
+            )
+        dataset = await self._repository.build_report_dataset(
+            start=start,
+            end=end,
+            rules_version=self._rules_version,
+        )
+        return ReportRun(
+            id=uuid4(),
+            period_type="custom",
+            period_start=start,
+            period_end=end,
+            status="completed",
+            dataset=dataset,
+        )
+
+    def _adhoc_artifact(self, report: ReportRun, format: str) -> ReportArtifact:
+        rendered = _format_report(report, format)
+        filename = _filename(report, rendered.extension)
+        return ReportArtifact(
+            delivery_id=uuid4(),
+            report_id=report.id,
+            period_type=report.period_type,
+            filename=filename,
+            media_type=rendered.media_type,
+            content=rendered.content,
+        )
 
     async def download_latest(
         self,
@@ -370,6 +441,8 @@ class ReportService:
         format: str,
     ) -> ReportArtifact:
         report = await self.latest(period_type=period_type)
+        if _is_adhoc(report.period_type):
+            return self._adhoc_artifact(report, format)
         delivery_id = await self._repository.start_report_delivery(
             report_id=report.id,
             user_id=actor.id,
@@ -401,6 +474,17 @@ class ReportService:
             )
             raise
 
+    async def download_custom_range(
+        self,
+        *,
+        actor: UserIdentity,
+        start: datetime,
+        end: datetime,
+        format: str,
+    ) -> ReportArtifact:
+        report = await self.custom_range(start=start, end=end)
+        return self._adhoc_artifact(report, format)
+
     async def send_latest_telegram(
         self,
         *,
@@ -408,6 +492,8 @@ class ReportService:
         period_type: str,
         format: str,
     ) -> ReportDelivery:
+        if _is_adhoc(period_type):
+            raise ReportPeriodInvalid("telegram_unsupported_for_period")
         report = await self.latest(period_type=period_type)
         delivery_id = await self._repository.start_report_delivery(
             report_id=report.id,

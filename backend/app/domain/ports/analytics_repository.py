@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -107,6 +108,15 @@ class AnalyticsRepository(Protocol):
         *,
         period_type: str,
     ) -> ReportRun | None: ...
+
+    async def build_report_dataset(
+        self,
+        *,
+        start: datetime,
+        end: datetime,
+        rules_version: str,
+        limit: int = 20,
+    ) -> dict[str, object]: ...
 
     async def start_report_delivery(
         self,

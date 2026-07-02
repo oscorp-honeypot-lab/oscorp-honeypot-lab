@@ -1595,6 +1595,58 @@ formas se implementó el enfoque pedido explícitamente por el usuario.
 
 Evidencia: docs/evidencias/bugfix_2026-07-01_sessions_table_layout_auto.md
 
+## Corrección post-v1.0.0 — Actualización optimista del badge "Revisión" ✅
+
+Objetivo: corregir que el badge "Revisión" de la tabla en `/sessions` siguiera mostrando
+"Pendiente" tras marcar una sesión como revisada y volver desde el detalle, hasta recargar
+la página manualmente.
+
+```text
+[x] reviewMutation solo parcheaba el cache de React Query de la sesión individual
+    (["sessions", "detail", sessionKey]), nunca el de la lista (["sessions", query]).
+    Al volver a /sessions, React Query servía el cache de lista stale hasta el próximo
+    refetchInterval (10s).
+    Fix: ciclo optimista completo (onMutate/onError/onSuccess) que parchea tanto el cache
+    de detalle como TODOS los caches de lista activos/inactivos vía
+    queryClient.setQueriesData con un predicado (cualquier ["sessions", <query>] que no sea
+    ["sessions", "detail", ...]), con rollback en error y reconciliación con la respuesta
+    real del servidor en éxito.
+```
+
+Evidencia: docs/evidencias/bugfix_2026-07-02_sessions_review_optimistic_update.md
+
+## Feature post-v1.0.0 — Reporte "últimas 24h" y descarga con rango personalizado ✅
+
+Objetivo: el reporte diario solo cubre 00:00–23:59 UTC del día anterior (precalculado por el
+scheduler), por lo que los eventos del día en curso no aparecen en ningún reporte hasta el día
+siguiente.
+
+```text
+[x] Nuevo reporte "últimas 24h" — ventana rolling calculada en vivo en cada pedido
+    (GET /api/v1/reports/latest/24h y su descarga), sin depender del precálculo de
+    report_runs. ReportService.latest()/download_latest() detectan period_type="24h" de
+    forma transparente sobre las rutas existentes.
+[x] Nueva ruta GET /api/v1/reports/custom/download?start=...&end=...&format=... para
+    descargar un reporte de rango de fechas arbitrario (máx. 90 días), validado en
+    ReportService.custom_range().
+[x] Decisión confirmada con el usuario: los reportes 24h/custom se calculan en vivo SIN
+    persistir en report_runs/report_deliveries (ventana siempre distinta, evita migración
+    para relajar el CHECK period_type y el FK NOT NULL de report_deliveries). No queda
+    auditoría de estas descargas puntuales, a diferencia de daily/weekly.
+[x] AnalyticsRepository.build_report_dataset() nuevo — porta las 9 consultas de
+    pipeline/reports/engine.py a SQLAlchemy async (duplicación de SQL aceptada: el pipeline
+    corre sync/offline, el backend es async y no comparte capa de datos con él).
+[x] Dashboard: fila "Últimas 24h" en el panel de Reportes (sin botón Telegram, rechazado
+    explícitamente por el backend) y formulario "Rango personalizado" con selectores de
+    fecha/hora y descarga HTML/CSV.
+```
+
+Verificación: 18/18 tests unitarios (`test_report_service.py`, TDD RED→GREEN→TRIANGULATE),
+8/8 tests de integración (`test_reports_api.py`) contra Postgres real, y verificación visual
+con Chrome headless contra el dashboard real.
+
+Evidencia: docs/evidencias/feature_2026-07-02_reportes_24h_y_rango_personalizado.md
+
 ## Fase 39 — Documentación, defensa y actualización de tesis
 
 Objetivo: cerrar el proyecto académico después de finalizar el sistema.

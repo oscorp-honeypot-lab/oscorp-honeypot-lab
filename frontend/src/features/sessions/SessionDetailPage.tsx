@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Query,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   RefreshCw,
   Search,
@@ -13,6 +18,7 @@ import {
 import type {
   SessionDetailResponse,
   SessionListItemResponse,
+  SessionPageResponse,
 } from "../../api/generated/types.gen";
 import { useAuth } from "../auth/AuthProvider";
 
@@ -299,6 +305,25 @@ export function SessionDetailView({
 
 // --- Container ---
 
+function patchSession(
+  session: SessionListItemResponse,
+  reviewed: boolean,
+  reviewerUsername: string | undefined,
+): SessionListItemResponse {
+  return {
+    ...session,
+    reviewed,
+    reviewed_at: reviewed ? new Date().toISOString() : null,
+    reviewed_by_username: reviewed
+      ? (reviewerUsername ?? session.reviewed_by_username)
+      : null,
+  };
+}
+
+function isSessionsListQuery(query: Query): boolean {
+  return query.queryKey[0] === "sessions" && query.queryKey[1] !== "detail";
+}
+
 export function SessionDetailPage() {
   const { sessionKey } = useParams<{ sessionKey: string }>();
   const { user } = useAuth();
@@ -315,11 +340,71 @@ export function SessionDetailPage() {
 
   const reviewMutation = useMutation({
     mutationFn: (reviewed: boolean) => reviewSession(sessionKey!, reviewed),
+    onMutate: async (reviewed: boolean) => {
+      await queryClient.cancelQueries({
+        queryKey: ["sessions", "detail", sessionKey],
+      });
+      await queryClient.cancelQueries({ predicate: isSessionsListQuery });
+
+      const previousDetail = queryClient.getQueryData<SessionDetailResponse>([
+        "sessions",
+        "detail",
+        sessionKey,
+      ]);
+      const previousLists = queryClient.getQueriesData<SessionPageResponse>({
+        predicate: isSessionsListQuery,
+      });
+
+      queryClient.setQueryData<SessionDetailResponse>(
+        ["sessions", "detail", sessionKey],
+        (old) =>
+          old ? { ...old, session: patchSession(old.session, reviewed, user?.username) } : old,
+      );
+      queryClient.setQueriesData<SessionPageResponse>(
+        { predicate: isSessionsListQuery },
+        (old) =>
+          old
+            ? {
+                ...old,
+                items: old.items.map((item) =>
+                  item.session_key === sessionKey
+                    ? patchSession(item, reviewed, user?.username)
+                    : item,
+                ),
+              }
+            : old,
+      );
+
+      return { previousDetail, previousLists };
+    },
+    onError: (_err, _reviewed, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(
+          ["sessions", "detail", sessionKey],
+          context.previousDetail,
+        );
+      }
+      context?.previousLists?.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data);
+      });
+    },
     onSuccess: (updated: SessionListItemResponse) => {
       queryClient.setQueryData(
         ["sessions", "detail", sessionKey],
         (old: SessionDetailResponse | undefined) =>
           old ? { ...old, session: updated } : old,
+      );
+      queryClient.setQueriesData<SessionPageResponse>(
+        { predicate: isSessionsListQuery },
+        (old) =>
+          old
+            ? {
+                ...old,
+                items: old.items.map((item) =>
+                  item.session_key === updated.session_key ? updated : item,
+                ),
+              }
+            : old,
       );
     },
   });

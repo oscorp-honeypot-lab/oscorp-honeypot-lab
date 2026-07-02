@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import {
+  downloadCustomReport,
   downloadLatestReport,
   getGeoStats,
   getMttdStats,
@@ -226,6 +227,19 @@ export function DashboardPage() {
             setReportBusy(null);
           }
         }}
+        onDownloadCustom={async (start, end, format) => {
+          const key = `custom-${format}-download`;
+          setReportBusy(key);
+          setReportStatus("");
+          try {
+            await downloadCustomReport(start, end, format);
+            setReportStatus("Descarga preparada");
+          } catch {
+            setReportStatus("No se pudo descargar el reporte");
+          } finally {
+            setReportBusy(null);
+          }
+        }}
       />
       {geo.data && <GeoPanel stats={geo.data} />}
     </div>
@@ -370,16 +384,31 @@ function ReportPanel({
   status,
   onDownload,
   onTelegram,
+  onDownloadCustom,
 }: {
   busy: string | null;
   status: string;
-  onDownload: (periodType: "daily" | "weekly", format: "html" | "csv") => Promise<void>;
-  onTelegram: (periodType: "daily" | "weekly") => Promise<void>;
+  onDownload: (
+    periodType: "daily" | "weekly" | "24h",
+    format: "html" | "csv",
+  ) => Promise<void>;
+  onTelegram: (periodType: "daily" | "weekly" | "24h") => Promise<void>;
+  onDownloadCustom: (
+    start: string,
+    end: string,
+    format: "html" | "csv",
+  ) => Promise<void>;
 }) {
   const periods = [
-    { key: "daily" as const, label: "Diario" },
-    { key: "weekly" as const, label: "Semanal" },
+    { key: "daily" as const, label: "Diario", telegram: true },
+    { key: "weekly" as const, label: "Semanal", telegram: true },
+    { key: "24h" as const, label: "Últimas 24h", telegram: false },
   ];
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const customRangeValid =
+    customStart !== "" && customEnd !== "" && customStart < customEnd;
+
   return (
     <section className="report-panel" aria-label="Reportes periodicos">
       <div className="panel-heading">
@@ -412,19 +441,68 @@ function ReportPanel({
               >
                 <Download aria-hidden="true" size={16} />
               </button>
-              <button
-                className="icon-button"
-                aria-label={`Enviar reporte ${period.label} por Telegram`}
-                title="Enviar Telegram"
-                disabled={busy !== null}
-                onClick={() => void onTelegram(period.key)}
-              >
-                <Send aria-hidden="true" size={16} />
-              </button>
+              {period.telegram && (
+                <button
+                  className="icon-button"
+                  aria-label={`Enviar reporte ${period.label} por Telegram`}
+                  title="Enviar Telegram"
+                  disabled={busy !== null}
+                  onClick={() => void onTelegram(period.key)}
+                >
+                  <Send aria-hidden="true" size={16} />
+                </button>
+              )}
             </div>
           </div>
         ))}
       </div>
+      <form
+        className="report-custom-range"
+        aria-label="Reporte con rango de fechas personalizado"
+        onSubmit={(event) => event.preventDefault()}
+      >
+        <strong>Rango personalizado</strong>
+        <div className="report-custom-range-fields">
+          <label>
+            Desde
+            <input
+              type="datetime-local"
+              value={customStart}
+              onChange={(event) => setCustomStart(event.target.value)}
+            />
+          </label>
+          <label>
+            Hasta
+            <input
+              type="datetime-local"
+              value={customEnd}
+              onChange={(event) => setCustomEnd(event.target.value)}
+            />
+          </label>
+          <button
+            className="icon-button"
+            aria-label="Descargar reporte de rango personalizado HTML"
+            title="Descargar HTML"
+            disabled={busy !== null || !customRangeValid}
+            onClick={() =>
+              void onDownloadCustom(customStart, customEnd, "html")
+            }
+          >
+            <FileText aria-hidden="true" size={16} />
+          </button>
+          <button
+            className="icon-button"
+            aria-label="Descargar reporte de rango personalizado CSV"
+            title="Descargar CSV"
+            disabled={busy !== null || !customRangeValid}
+            onClick={() =>
+              void onDownloadCustom(customStart, customEnd, "csv")
+            }
+          >
+            <Download aria-hidden="true" size={16} />
+          </button>
+        </div>
+      </form>
       {status && <p className="report-status">{status}</p>}
     </section>
   );

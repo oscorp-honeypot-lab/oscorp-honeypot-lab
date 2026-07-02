@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -10,6 +11,7 @@ from app.application.report_service import (
     ReportDeliveryFailed,
     ReportFormatUnsupported,
     ReportNotFound,
+    ReportPeriodInvalid,
     ReportService,
 )
 from app.domain.analytics import ReportArtifact
@@ -75,6 +77,39 @@ async def download_latest_report(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="report_format_unsupported",
         ) from exc
+    except ReportPeriodInvalid as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="report_period_invalid",
+        ) from exc
+    return _download_response(artifact)
+
+
+@router.get("/custom/download")
+async def download_custom_report(
+    actor: Viewer,
+    service: Service,
+    start: Annotated[datetime, Query()],
+    end: Annotated[datetime, Query()],
+    format: Annotated[str, Query(pattern=r"^(html|csv)$")] = "html",
+) -> Response:
+    try:
+        artifact = await service.download_custom_range(
+            actor=actor,
+            start=start,
+            end=end,
+            format=format,
+        )
+    except ReportPeriodInvalid as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="report_period_invalid",
+        ) from exc
+    except ReportFormatUnsupported as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="report_format_unsupported",
+        ) from exc
     return _download_response(artifact)
 
 
@@ -103,6 +138,11 @@ async def send_latest_report_telegram(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="report_format_unsupported",
+        ) from exc
+    except ReportPeriodInvalid as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="report_period_invalid",
         ) from exc
     except ReportDeliveryFailed as exc:
         raise HTTPException(

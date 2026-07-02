@@ -45,7 +45,7 @@ export type SessionQuery = {
   sortOrder: "asc" | "desc";
 };
 
-export type ReportPeriodType = "daily" | "weekly";
+export type ReportPeriodType = "daily" | "weekly" | "24h";
 export type ReportFormat = "html" | "csv";
 
 export type LabRunResponse = {
@@ -196,31 +196,45 @@ function filenameFromDisposition(header: string | null, fallback: string): strin
   return match ? match[1] : fallback;
 }
 
-export async function downloadLatestReport(
-  periodType: ReportPeriodType,
-  format: ReportFormat,
-): Promise<void> {
-  const response = await fetch(
-    `/api/v1/reports/latest/${periodType}/download?format=${format}`,
-    { credentials: "include" },
-  );
+async function triggerReportDownload(url: string, fallback: string): Promise<void> {
+  const response = await fetch(url, { credentials: "include" });
   if (!response.ok) {
     throw new ApiError("report_download_failed", response.status);
   }
   const blob = await response.blob();
-  const fallback = `oscorp-report-${periodType}.${format}`;
   const filename = filenameFromDisposition(
     response.headers.get("content-disposition"),
     fallback,
   );
-  const url = URL.createObjectURL(blob);
+  const objectUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.href = url;
+  link.href = objectUrl;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(objectUrl);
+}
+
+export async function downloadLatestReport(
+  periodType: ReportPeriodType,
+  format: ReportFormat,
+): Promise<void> {
+  await triggerReportDownload(
+    `/api/v1/reports/latest/${periodType}/download?format=${format}`,
+    `oscorp-report-${periodType}.${format}`,
+  );
+}
+
+export async function downloadCustomReport(
+  start: string,
+  end: string,
+  format: ReportFormat,
+): Promise<void> {
+  await triggerReportDownload(
+    `/api/v1/reports/custom/download?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&format=${format}`,
+    `oscorp-report-custom.${format}`,
+  );
 }
 
 export async function sendLatestReportTelegram(

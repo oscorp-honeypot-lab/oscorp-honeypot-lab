@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 import pytest
 
-from app.application.report_service import ReportDeliveryFailed, ReportService
+from app.application.report_service import (
+    ReportDeliveryFailed,
+    ReportPeriodInvalid,
+    ReportService,
+)
 from app.domain.analytics import ReportRun
 from app.domain.identity import Role, UserIdentity
 
@@ -45,13 +49,40 @@ def _actor() -> UserIdentity:
     )
 
 
+def _adhoc_dataset() -> dict:
+    return {
+        "totals": {"events": 4, "sessions": 1, "unique_source_ips": 1},
+        "top_source_ips": [{"src_ip": "198.51.100.1", "event_count": 4}],
+        "top_countries": [],
+        "top_credentials": [],
+        "top_commands": [],
+        "downloads": {"downloads": 0, "unique_hashes": 0, "top_files": []},
+        "malicious_hashes": [],
+        "critical_sessions": {"total": 0, "top_sessions": []},
+        "mttd": {"avg_seconds": None, "total_sent": 0, "total_failed": 0},
+        "failed_alerts": {"total_failed": 0, "affected_sessions": 0, "by_error_code": []},
+    }
+
+
 class _Repo:
     def __init__(self) -> None:
         self.finished: list[dict] = []
         self.started: list[dict] = []
+        self.build_dataset_calls: list[dict] = []
 
     async def get_latest_report(self, *, period_type: str):
         return _report() if period_type == "daily" else None
+
+    async def build_report_dataset(self, *, start, end, rules_version, limit=20):
+        self.build_dataset_calls.append(
+            {
+                "start": start,
+                "end": end,
+                "rules_version": rules_version,
+                "limit": limit,
+            }
+        )
+        return _adhoc_dataset()
 
     async def start_report_delivery(self, **kwargs):
         self.started.append(kwargs)
@@ -226,3 +257,102 @@ async def test_send_latest_telegram_records_failure() -> None:
     assert "OSCORP ThreatLab report" in telegram.messages[0]
     assert repo.finished[0]["status"] == "failed"
     assert repo.finished[0]["error_code"] == "http_429: Too Many Requests"
+
+
+@pytest.mark.asyncio
+async def test_latest_rolling_24h_computes_window_from_now() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    report = await service.latest(period_type="24h")
+    assert report.period_type == "24h"
+    delta = report.period_end - report.period_start
+    assert delta == pytest.approx(timedelta(hours=24), abs=timedelta(seconds=5))
+    assert repo.build_dataset_calls[0]["rules_version"] == "1.1.0"
+
+
+@pytest.mark.asyncio
+async def test_download_latest_24h_skips_delivery_tracking() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    artifact = await service.download_latest(
+        actor=_actor(),
+        period_type="24h",
+        format="html",
+    )
+    assert artifact.filename.endswith(".html")
+    assert b"OSCORP ThreatLab" in artifact.content
+    assert repo.started == []
+    assert repo.finished == []
+
+
+@pytest.mark.asyncio
+async def test_custom_range_happy_path() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    start = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    end = datetime(2026, 6, 5, tzinfo=timezone.utc)
+    report = await service.custom_range(start=start, end=end)
+    assert report.period_type == "custom"
+    assert report.period_start == start
+    assert report.period_end == end
+    assert report.dataset["totals"]["events"] == 4
+
+
+@pytest.mark.asyncio
+async def test_custom_range_rejects_start_after_end() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    start = datetime(2026, 6, 5, tzinfo=timezone.utc)
+    end = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    with pytest.raises(ReportPeriodInvalid):
+        await service.custom_range(start=start, end=end)
+
+
+@pytest.mark.asyncio
+async def test_custom_range_rejects_equal_start_and_end() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    same = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    with pytest.raises(ReportPeriodInvalid):
+        await service.custom_range(start=same, end=same)
+
+
+@pytest.mark.asyncio
+async def test_custom_range_rejects_range_over_max_days() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    end = start + timedelta(days=91)
+    with pytest.raises(ReportPeriodInvalid):
+        await service.custom_range(start=start, end=end)
+
+
+@pytest.mark.asyncio
+async def test_download_custom_range_skips_delivery_tracking() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    start = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    end = datetime(2026, 6, 5, tzinfo=timezone.utc)
+    artifact = await service.download_custom_range(
+        actor=_actor(),
+        start=start,
+        end=end,
+        format="csv",
+    )
+    assert "custom" in artifact.filename
+    assert repo.started == []
+    assert repo.finished == []
+
+
+@pytest.mark.asyncio
+async def test_send_latest_telegram_rejects_adhoc_period() -> None:
+    repo = _Repo()
+    service = ReportService(repo)
+    with pytest.raises(ReportPeriodInvalid):
+        await service.send_latest_telegram(
+            actor=_actor(),
+            period_type="24h",
+            format="html",
+        )
+    assert repo.started == []
+    assert repo.finished == []

@@ -1,7 +1,35 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { SessionDetailView } from "./SessionDetailPage";
-import type { SessionDetailResponse } from "../../api/generated/types.gen";
+import { SessionDetailPage, SessionDetailView } from "./SessionDetailPage";
+import type {
+  SessionDetailResponse,
+  SessionListItemResponse,
+  SessionPageResponse,
+} from "../../api/generated/types.gen";
+
+vi.mock("../../api/client", async () => {
+  const actual = await vi.importActual<typeof import("../../api/client")>(
+    "../../api/client",
+  );
+  return {
+    ...actual,
+    getSessionDetail: vi.fn(),
+    reviewSession: vi.fn(),
+  };
+});
+
+vi.mock("../auth/AuthProvider", () => ({
+  useAuth: () => ({
+    user: { id: "u1", username: "analyst1", role: "analyst" },
+    isLoading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    loginPending: false,
+    loginError: false,
+  }),
+}));
 
 const baseSession = {
   session_key: "test-sensor:abc123",
@@ -197,5 +225,61 @@ describe("SessionDetailView states", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /marcar como revisada/i }));
     expect(onReview).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("SessionDetailPage container — optimistic review update", () => {
+  it("patches the sessions list cache before the mutation resolves, and reconciles after", async () => {
+    const { getSessionDetail, reviewSession } = await import("../../api/client");
+    const sessionKey = baseSession.session_key;
+
+    let resolveReview: (value: SessionListItemResponse) => void = () => undefined;
+    const reviewPromise = new Promise<SessionListItemResponse>((resolve) => {
+      resolveReview = resolve;
+    });
+    vi.mocked(reviewSession).mockReturnValue(reviewPromise);
+    vi.mocked(getSessionDetail).mockResolvedValue(baseData);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const listQueryKey = ["sessions", { page: 1, pageSize: 25 }] as const;
+    const listData: SessionPageResponse = {
+      items: [baseSession],
+      pagination: { page: 1, page_size: 25, total: 1, pages: 1 },
+    };
+    queryClient.setQueryData(listQueryKey, listData);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[`/sessions/${sessionKey}`]}>
+          <Routes>
+            <Route path="/sessions/:sessionKey" element={<SessionDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /marcar como revisada/i }),
+    );
+
+    await waitFor(() => {
+      const list = queryClient.getQueryData<SessionPageResponse>(listQueryKey);
+      expect(list?.items[0].reviewed).toBe(true);
+    });
+    expect(vi.mocked(reviewSession)).toHaveBeenCalledWith(sessionKey, true);
+
+    resolveReview({
+      ...baseSession,
+      reviewed: true,
+      reviewed_by_username: "analyst1",
+      reviewed_at: "2026-07-02T12:00:00Z",
+    });
+
+    await waitFor(() => {
+      const list = queryClient.getQueryData<SessionPageResponse>(listQueryKey);
+      expect(list?.items[0].reviewed_by_username).toBe("analyst1");
+    });
   });
 });

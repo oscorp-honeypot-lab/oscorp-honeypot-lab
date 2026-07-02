@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -969,6 +970,364 @@ class PostgresAnalyticsRepository:
             status=str(row.status),
             dataset=dict(dataset),
         )
+
+    async def build_report_dataset(
+        self,
+        *,
+        start: datetime,
+        end: datetime,
+        rules_version: str,
+        limit: int = 20,
+    ) -> dict[str, object]:
+        params = {"start": start, "end": end}
+        limited = {**params, "limit": limit}
+        async with self._session_factory() as session:
+            event_row = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            COUNT(*) AS event_count,
+                            COUNT(DISTINCT src_ip)
+                                FILTER (WHERE src_ip IS NOT NULL) AS unique_source_ips
+                        FROM eventos
+                        WHERE timestamp_evento >= :start
+                          AND timestamp_evento < :end
+                    """),
+                    params,
+                )
+            ).one()
+            session_row = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            COUNT(*) AS sessions,
+                            COUNT(*) FILTER (WHERE has_successful_login)
+                                AS successful_login_sessions,
+                            COUNT(*) FILTER (WHERE has_download)
+                                AS download_sessions
+                        FROM sessions
+                        WHERE first_event_at >= :start
+                          AND first_event_at < :end
+                    """),
+                    params,
+                )
+            ).one()
+            totals = {
+                "events": int(event_row[0]),
+                "unique_source_ips": int(event_row[1]),
+                "sessions": int(session_row[0]),
+                "successful_login_sessions": int(session_row[1]),
+                "download_sessions": int(session_row[2]),
+            }
+
+            top_source_ips_rows = (
+                await session.execute(
+                    text("""
+                        SELECT src_ip, COUNT(*) AS event_count
+                        FROM eventos
+                        WHERE timestamp_evento >= :start
+                          AND timestamp_evento < :end
+                          AND src_ip IS NOT NULL
+                        GROUP BY src_ip
+                        ORDER BY event_count DESC, src_ip ASC
+                        LIMIT :limit
+                    """),
+                    limited,
+                )
+            ).fetchall()
+            top_source_ips = [
+                {"src_ip": str(row[0]), "event_count": int(row[1])}
+                for row in top_source_ips_rows
+            ]
+
+            top_countries_rows = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            g.country,
+                            g.country_code,
+                            COUNT(DISTINCT s.session_key) AS session_count,
+                            COUNT(DISTINCT s.src_ip) AS unique_ips
+                        FROM sessions s
+                        JOIN ip_geo_cache g
+                          ON g.ip = s.src_ip
+                         AND g.expires_at > NOW()
+                        WHERE s.first_event_at >= :start
+                          AND s.first_event_at < :end
+                          AND g.error IS NULL
+                          AND g.country IS NOT NULL
+                        GROUP BY g.country, g.country_code
+                        ORDER BY session_count DESC, g.country ASC
+                        LIMIT :limit
+                    """),
+                    limited,
+                )
+            ).fetchall()
+            top_countries = [
+                {
+                    "country": str(row[0]),
+                    "country_code": str(row[1]) if row[1] is not None else None,
+                    "session_count": int(row[2]),
+                    "unique_ips": int(row[3]),
+                }
+                for row in top_countries_rows
+            ]
+
+            top_credentials_rows = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            COALESCE(username, '') AS username,
+                            COALESCE(password, '') AS password,
+                            COUNT(*) AS attempts
+                        FROM eventos
+                        WHERE timestamp_evento >= :start
+                          AND timestamp_evento < :end
+                          AND eventid IN ('cowrie.login.failed', 'cowrie.login.success')
+                          AND (username IS NOT NULL OR password IS NOT NULL)
+                        GROUP BY COALESCE(username, ''), COALESCE(password, '')
+                        ORDER BY attempts DESC, username ASC, password ASC
+                        LIMIT :limit
+                    """),
+                    limited,
+                )
+            ).fetchall()
+            top_credentials = [
+                {
+                    "username": str(row[0]),
+                    "password": str(row[1]),
+                    "attempts": int(row[2]),
+                }
+                for row in top_credentials_rows
+            ]
+
+            top_commands_rows = (
+                await session.execute(
+                    text("""
+                        SELECT command_input, COUNT(*) AS executions
+                        FROM eventos
+                        WHERE timestamp_evento >= :start
+                          AND timestamp_evento < :end
+                          AND eventid = 'cowrie.command.input'
+                          AND command_input IS NOT NULL
+                        GROUP BY command_input
+                        ORDER BY executions DESC, command_input ASC
+                        LIMIT :limit
+                    """),
+                    limited,
+                )
+            ).fetchall()
+            top_commands = [
+                {"command": str(row[0]), "executions": int(row[1])}
+                for row in top_commands_rows
+            ]
+
+            download_totals_row = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            COUNT(*) AS downloads,
+                            COUNT(DISTINCT shasum)
+                                FILTER (WHERE shasum IS NOT NULL) AS unique_hashes
+                        FROM eventos
+                        WHERE timestamp_evento >= :start
+                          AND timestamp_evento < :end
+                          AND eventid = 'cowrie.session.file_download'
+                    """),
+                    params,
+                )
+            ).one()
+            top_files_rows = (
+                await session.execute(
+                    text("""
+                        SELECT url, shasum, COUNT(*) AS downloads
+                        FROM eventos
+                        WHERE timestamp_evento >= :start
+                          AND timestamp_evento < :end
+                          AND eventid = 'cowrie.session.file_download'
+                        GROUP BY url, shasum
+                        ORDER BY downloads DESC, url ASC NULLS LAST, shasum ASC NULLS LAST
+                        LIMIT :limit
+                    """),
+                    limited,
+                )
+            ).fetchall()
+            downloads = {
+                "downloads": int(download_totals_row[0]),
+                "unique_hashes": int(download_totals_row[1]),
+                "top_files": [
+                    {
+                        "url": str(row[0]) if row[0] is not None else None,
+                        "sha256": str(row[1]) if row[1] is not None else None,
+                        "downloads": int(row[2]),
+                    }
+                    for row in top_files_rows
+                ],
+            }
+
+            malicious_hashes_rows = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            e.shasum,
+                            MAX(v.malicious) AS malicious,
+                            MAX(v.suspicious) AS suspicious,
+                            COUNT(*) AS downloads
+                        FROM eventos e
+                        JOIN vt_hash_cache v ON v.sha256 = e.shasum
+                        WHERE e.timestamp_evento >= :start
+                          AND e.timestamp_evento < :end
+                          AND e.eventid = 'cowrie.session.file_download'
+                          AND v.expires_at > NOW()
+                          AND v.error IS NULL
+                          AND v.malicious > 0
+                        GROUP BY e.shasum
+                        ORDER BY malicious DESC, downloads DESC, e.shasum ASC
+                        LIMIT :limit
+                    """),
+                    limited,
+                )
+            ).fetchall()
+            malicious_hashes = [
+                {
+                    "sha256": str(row[0]),
+                    "malicious": int(row[1]),
+                    "suspicious": int(row[2]) if row[2] is not None else None,
+                    "downloads": int(row[3]),
+                }
+                for row in malicious_hashes_rows
+            ]
+
+            critical_params = {**params, "rules_version": rules_version}
+            critical_total_row = (
+                await session.execute(
+                    text("""
+                        SELECT COUNT(*)
+                        FROM sessions s
+                        JOIN session_risk_scores r ON r.session_key = s.session_key
+                        WHERE s.first_event_at >= :start
+                          AND s.first_event_at < :end
+                          AND r.rules_version = :rules_version
+                          AND r.risk_level = 'critical'
+                    """),
+                    critical_params,
+                )
+            ).one()
+            critical_top_rows = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            s.session_key,
+                            s.src_ip,
+                            s.first_event_at,
+                            r.score
+                        FROM sessions s
+                        JOIN session_risk_scores r ON r.session_key = s.session_key
+                        WHERE s.first_event_at >= :start
+                          AND s.first_event_at < :end
+                          AND r.rules_version = :rules_version
+                          AND r.risk_level = 'critical'
+                        ORDER BY r.score DESC, s.first_event_at DESC, s.session_key ASC
+                        LIMIT :limit
+                    """),
+                    {**critical_params, "limit": limit},
+                )
+            ).fetchall()
+            critical_sessions = {
+                "total": int(critical_total_row[0]),
+                "top_sessions": [
+                    {
+                        "session_key": str(row[0]),
+                        "src_ip": str(row[1]) if row[1] is not None else None,
+                        "first_event_at": row[2].isoformat() if row[2] is not None else None,
+                        "risk_score": int(row[3]),
+                    }
+                    for row in critical_top_rows
+                ],
+            }
+
+            mttd_row = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            AVG(mttd_seconds) AS avg_seconds,
+                            MIN(mttd_seconds) AS min_seconds,
+                            MAX(mttd_seconds) AS max_seconds,
+                            PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY mttd_seconds)
+                                AS p95_seconds,
+                            COUNT(*) FILTER (WHERE status = 'sent') AS total_sent,
+                            COUNT(*) FILTER (WHERE status = 'failed') AS total_failed,
+                            COUNT(*) FILTER (WHERE status = 'pending') AS total_pending
+                        FROM alerts
+                        WHERE triggered_at >= :start
+                          AND triggered_at < :end
+                    """),
+                    params,
+                )
+            ).one()
+            mttd_closed = int(mttd_row[4]) + int(mttd_row[5])
+            mttd = {
+                "avg_seconds": float(mttd_row[0]) if mttd_row[0] is not None else None,
+                "min_seconds": float(mttd_row[1]) if mttd_row[1] is not None else None,
+                "max_seconds": float(mttd_row[2]) if mttd_row[2] is not None else None,
+                "p95_seconds": float(mttd_row[3]) if mttd_row[3] is not None else None,
+                "total_sent": int(mttd_row[4]),
+                "total_failed": int(mttd_row[5]),
+                "total_pending": int(mttd_row[6]),
+                "failure_rate": round(int(mttd_row[5]) / mttd_closed, 4) if mttd_closed else 0.0,
+            }
+
+            failed_totals_row = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            COUNT(*) AS total_failed,
+                            COUNT(DISTINCT session_key) AS affected_sessions
+                        FROM alerts
+                        WHERE triggered_at >= :start
+                          AND triggered_at < :end
+                          AND status = 'failed'
+                    """),
+                    params,
+                )
+            ).one()
+            failed_by_error_rows = (
+                await session.execute(
+                    text("""
+                        SELECT
+                            COALESCE(error_code, 'unknown') AS error_code,
+                            COUNT(*) AS count
+                        FROM alerts
+                        WHERE triggered_at >= :start
+                          AND triggered_at < :end
+                          AND status = 'failed'
+                        GROUP BY COALESCE(error_code, 'unknown')
+                        ORDER BY count DESC, error_code ASC
+                    """),
+                    params,
+                )
+            ).fetchall()
+            failed_alerts = {
+                "total_failed": int(failed_totals_row[0]),
+                "affected_sessions": int(failed_totals_row[1]),
+                "by_error_code": [
+                    {"error_code": str(row[0]), "count": int(row[1])}
+                    for row in failed_by_error_rows
+                ],
+            }
+
+        return {
+            "totals": totals,
+            "top_source_ips": top_source_ips,
+            "top_countries": top_countries,
+            "top_credentials": top_credentials,
+            "top_commands": top_commands,
+            "downloads": downloads,
+            "malicious_hashes": malicious_hashes,
+            "critical_sessions": critical_sessions,
+            "mttd": mttd,
+            "failed_alerts": failed_alerts,
+        }
 
     async def start_report_delivery(
         self,
