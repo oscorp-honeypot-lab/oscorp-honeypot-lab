@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$SkipValidation
 )
 
@@ -45,6 +45,51 @@ function Get-ElasticsearchEventCount {
     return $count
 }
 
+$CowrieLogPath = "/cowrie/cowrie-git/var/log/cowrie/cowrie.json"
+$CowriePython = "/cowrie/cowrie-env/bin/python"
+
+function Get-CowrieContainerLogLineCount {
+    # Se consulta directamente al contenedor (docker exec) en vez del bind mount del host:
+    # en Docker Desktop con backend WSL2, las escrituras por append del contenedor hacia un
+    # bind mount que vive en NTFS (C:\...) tardan en propagarse a la vista del host por el
+    # passthrough Windows<->WSL2. Leer el archivo desde adentro del contenedor evita ese lag.
+    # La imagen de cowrie no trae coreutils (ni wc, ni tail, ni sh) — se usa el python del venv.
+    $script = "print(sum(1 for _ in open('$CowrieLogPath', 'rb')))"
+    $result = & docker compose exec -T cowrie $CowriePython -c $script
+    if ($LASTEXITCODE -ne 0) {
+        throw "No se pudo consultar el log de Cowrie dentro del contenedor."
+    }
+    return [int]$result.Trim()
+}
+
+function Get-CowrieContainerLogTail {
+    param([int]$Skip)
+    $script = "import sys; f = open('$CowrieLogPath', 'rb'); lines = f.readlines(); sys.stdout.buffer.write(b''.join(lines[${Skip}:]))"
+    $raw = & docker compose exec -T cowrie $CowriePython -c $script
+    if ($LASTEXITCODE -ne 0) {
+        throw "No se pudo leer el log de Cowrie dentro del contenedor."
+    }
+    return $raw
+}
+
+function Reset-CowrieJsonLogObserver {
+    # El output observer de Twisted que escribe cowrie.json (cowrie/output/jsonlog.py) puede
+    # quedar deshabilitado en silencio tras un fallo de escritura transitorio en el bind mount
+    # (típico del passthrough NTFS<->WSL2 de Docker Desktop en Windows). El honeypot sigue
+    # funcionando con normalidad (SSH, log de stdout) pero deja de escribir eventos en
+    # cowrie.json para siempre hasta que se reinicia el proceso. Reiniciar el contenedor antes
+    # de la campaña re-inicializa el observer; el archivo no se trunca (honeypot.logtype=rotating).
+    Invoke-Docker compose restart cowrie
+    for ($attempt = 1; $attempt -le 30; $attempt++) {
+        $health = (& docker compose ps cowrie --format json | ConvertFrom-Json).Health
+        if ($health -eq "healthy") {
+            return
+        }
+        Start-Sleep -Seconds 1
+    }
+    throw "El contenedor cowrie no volvió a healthy tras el reinicio."
+}
+
 function Get-PipelineMetric {
     param(
         [string[]]$Output,
@@ -71,14 +116,18 @@ $checkpointOutput | Write-Output
 
 $beforePostgres = Get-PostgresEventCount
 $beforeElasticsearch = Get-ElasticsearchEventCount
-$beforeLogLines = (Get-Content -LiteralPath "cowrie\logs\cowrie.json").Count
+
+Write-Host "[demo] Reiniciando cowrie para garantizar un observer de log limpio..."
+Reset-CowrieJsonLogObserver
+$beforeLogLines = Get-CowrieContainerLogLineCount
 
 Write-Host "[demo] Ejecutando ataque completo..."
 Invoke-Docker compose --profile lab run --rm attacker-sim ./run_scenario.sh full
 
+$maxAttempts = 30
 $afterAttackLogLines = $beforeLogLines
-for ($attempt = 1; $attempt -le 15; $attempt++) {
-    $afterAttackLogLines = (Get-Content -LiteralPath "cowrie\logs\cowrie.json").Count
+for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    $afterAttackLogLines = Get-CowrieContainerLogLineCount
     if ($afterAttackLogLines -gt $beforeLogLines) {
         break
     }
@@ -88,8 +137,7 @@ if ($afterAttackLogLines -le $beforeLogLines) {
     throw "Cowrie no generó eventos nuevos."
 }
 
-$newEvents = Get-Content -LiteralPath "cowrie\logs\cowrie.json" |
-    Select-Object -Skip $beforeLogLines |
+$newEvents = Get-CowrieContainerLogTail -Skip $beforeLogLines |
     ForEach-Object { $_ | ConvertFrom-Json }
 
 $requiredEventIds = @(
