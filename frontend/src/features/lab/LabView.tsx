@@ -13,7 +13,7 @@ const SCENARIOS: ScenarioDef[] = [
     key: "brute-force",
     label: "Fuerza bruta",
     description:
-      "Simula 50 intentos de login SSH con credenciales del diccionario. Genera cowrie.login.failed y cowrie.login.success.",
+      "Prueba un diccionario de 10 contraseñas contra el usuario root y se detiene en la primera credencial válida. Genera cowrie.login.failed y cowrie.login.success.",
     Icon: Lock,
   },
   {
