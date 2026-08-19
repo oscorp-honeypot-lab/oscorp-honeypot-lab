@@ -1,3 +1,16 @@
+-- ============================================================
+-- OSCORP ThreatLab — Evidencia numerica, tercera tanda (ultima)
+-- Objetivo: caracterizar el MTTD, cuyo promedio global (10,6 dias)
+-- no es interpretable como tiempo de deteccion.
+--
+-- El dispatcher calcula:  mttd_seconds = NOW() - event_timestamp
+-- es decir, latencia entre la marca del evento en el sensor y el
+-- momento en que el pipeline lo proceso. En modo REAL esa latencia
+-- esta dominada por la periodicidad de la sincronizacion, no por
+-- la capacidad de deteccion. Estas consultas lo demuestran.
+--
+--   Get-Content .\docs\evidencias\consultas\evidencia_tesis_03.sql | docker compose exec -T postgres psql -U oscorp -d oscorp | Tee-Object -FilePath .\docs\evidencias\consultas\evidencia_tesis_03_salida.txt
+-- ============================================================
 -- Ejecutado el 13/08/2026 contra la instancia local (perfil LAB).
 
 \echo '=== K. MTTD desagregado por modo de origen de la sesion — LA CONSULTA CLAVE ==='

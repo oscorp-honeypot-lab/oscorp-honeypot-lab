@@ -1,4 +1,15 @@
--- Ejecutado el 13/08/2026 contra la instancia local (perfil LAB).
+-- ============================================================
+-- OSCORP ThreatLab — Evidencia numérica para la tesis (v3)
+-- Ejecutar con el stack levantado, desde la raíz del repositorio:
+--
+--   Get-Content evidencia_tesis.sql | docker compose exec -T postgres psql -U oscorp -d oscorp
+--
+-- Guardar la salida completa: agregar  > evidencia_tesis_salida.txt
+-- Anotar la FECHA y el COMMIT en el que se ejecutó.
+--   Get-Content .\docs\evidencias\consultas\evidencia_tesis_01.sql | docker compose exec -T postgres psql -U oscorp -d oscorp | Tee-Object -FilePath .\docs\evidencias\consultas\evidencia_tesis_01_salida.txt
+-- ============================================================
+
+-- Ejecutado el 19/08/2026 contra la instancia local (perfil LAB).
 
 \echo '=== 1. Unicidad de event_hash — indicador del 3.4.1 ==='
 SELECT COUNT(*)                              AS total_eventos,

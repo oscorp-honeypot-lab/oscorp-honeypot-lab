@@ -1,4 +1,13 @@
--- Ejecutado el 13/08/2026 contra la instancia local (perfil LAB).
+-- ============================================================
+-- OSCORP ThreatLab — Evidencia numerica, segunda tanda
+-- Cierra: distribucion de riesgo por version de reglas,
+--         jornadas efectivas del sensor REAL,
+--         MTTD actualizado y causa raiz de los fallos de entrega.
+--
+--   docker cp .\evidencia_tesis_2.sql oscorp_postgres:/tmp/e2.sql
+--   docker compose exec -T postgres psql -U oscorp -d oscorp -f /tmp/e2.sql > evidencia_tesis_2_salida.txt
+-- ============================================================
+-- Ejecutado el 19/08/2026 contra la instancia local (perfil LAB).
 
 \echo '=== A. Distribucion de riesgo POR VERSION DE REGLAS ==='
 SELECT rules_version, risk_level, COUNT(*) AS sesiones
