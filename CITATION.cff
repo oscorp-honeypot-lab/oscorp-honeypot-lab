@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+title: "OSCORP ThreatLab: laboratorio reproducible de honeypots SSH"
+message: "Si utiliza este software, cítelo como se indica."
+type: software
+authors:
+  - family-names: López
+    given-names: Santiago
+  - family-names: Morato
+    given-names: Elizabeth
+version: tesis-v1.0
+date-released: "2026-08-19"
+license: MIT
+repository-code: "https://github.com/oscorp-honeypot-lab/oscorp-honeypot-lab"
